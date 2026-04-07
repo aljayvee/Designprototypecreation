@@ -5,7 +5,7 @@ import {
   LogOut, Bell, Search, TrendingUp, Package, DollarSign,
   CheckCircle, Clock, AlertTriangle, XCircle, Menu, X, Plus, Edit2,
   Trash2, Download, Printer, Eye, RefreshCw, Star, Save,
-  Phone, Shield, ToggleLeft, ToggleRight, Building2
+  Phone, Shield, ToggleLeft, ToggleRight, Building2, Calendar
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -833,6 +833,10 @@ function RatesSection() {
 
 function ReportsSection() {
   const [tab, setTab] = useState("sales");
+  const [reportFreq, setReportFreq] = useState("Daily");
+  const [startDate, setStartDate] = useState("2026-03-23");
+  const [endDate, setEndDate] = useState("2026-03-23");
+
   const tabs = [
     { id: "sales",       label: "Sales Report" },
     { id: "performance", label: "Rider Performance" },
@@ -842,18 +846,20 @@ function ReportsSection() {
 
   const handlePrint = () => window.print();
   const handleExportPDF = () => {
-    toast.success("Report exported!", { description: `${tabs.find(t => t.id === tab)?.label} — March 23, 2026 saved to Downloads.` });
+    toast.success("Report exported!", { description: `${tabs.find(t => t.id === tab)?.label} (${reportFreq}) — ${startDate} to ${endDate} saved to Downloads.` });
   };
 
   return (
     <div className="space-y-5">
-      <div className="flex gap-2 flex-wrap">
-        {tabs.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)} className="px-4 py-2 rounded-xl"
-            style={{ background: tab === t.id ? NAVY : "#F3F4F6", color: tab === t.id ? "#fff" : "#374151", fontSize: "0.82rem" }}>
-            {t.label}
-          </button>
-        ))}
+      <div className="flex gap-2 flex-wrap items-center">
+        <div className="flex gap-2 flex-wrap">
+          {tabs.map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)} className="px-4 py-2 rounded-xl transition-all"
+              style={{ background: tab === t.id ? NAVY : "#F3F4F6", color: tab === t.id ? "#fff" : "#374151", fontSize: "0.82rem", fontWeight: tab === t.id ? 600 : 400 }}>
+              {t.label}
+            </button>
+          ))}
+        </div>
         <div className="flex gap-2 ml-auto">
           <button onClick={handlePrint} className="flex items-center gap-1.5 px-3 py-2 rounded-xl" style={{ background: "#F3F4F6", color: "#374151", fontSize: "0.82rem" }}>
             <Printer size={14} /> Print
@@ -864,15 +870,56 @@ function ReportsSection() {
         </div>
       </div>
 
+      <div className="bg-white rounded-2xl p-4 shadow-sm flex flex-wrap items-center gap-6" style={{ border: "1px solid #E5E7EB" }}>
+        <div className="flex flex-col gap-1.5">
+          <label style={{ color: "#6B7280", fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.05em" }}>REPORT FREQUENCY</label>
+          <div className="flex bg-[#F3F4F6] p-1 rounded-xl">
+            {["Daily", "Weekly", "Monthly", "Yearly"].map(f => (
+              <button key={f} onClick={() => setReportFreq(f)} className="px-4 py-1.5 rounded-lg transition-all"
+                style={{
+                  background: reportFreq === f ? "#fff" : "transparent",
+                  boxShadow: reportFreq === f ? "0 2px 4px rgba(0,0,0,0.05)" : "none",
+                  color: reportFreq === f ? NAVY : "#6B7280",
+                  fontSize: "0.8rem",
+                  fontWeight: reportFreq === f ? 700 : 500
+                }}>
+                {f}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label style={{ color: "#6B7280", fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.05em" }}>DATE FILTRATION</label>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#9CA3AF" }} />
+                <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+                  className="pl-9 pr-3 py-2 rounded-xl outline-none"
+                  style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", fontSize: "0.82rem", color: "#1F2937" }} />
+              </div>
+              <span style={{ color: "#9CA3AF" }}>—</span>
+              <div className="relative">
+                <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#9CA3AF" }} />
+                <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+                  className="pl-9 pr-3 py-2 rounded-xl outline-none"
+                  style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", fontSize: "0.82rem", color: "#1F2937" }} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {tab === "sales" && (
         <div className="space-y-4">
           <div className="grid grid-cols-3 gap-4">
-            <MetricCard title="Total Transactions" value="10"    sub="Today, Mar 23"       icon={ClipboardList} color="#3B82F6" />
-            <MetricCard title="Total Revenue"       value="₱875" sub="Sugo Share today"    icon={TrendingUp}    color="#10B981" />
-            <MetricCard title="Avg. Service Fee"    value="₱47"  sub="Per errand today"    icon={DollarSign}    color="#F59E0B" />
+            <MetricCard title="Total Transactions" value="10"    sub={`${reportFreq} summary`} icon={ClipboardList} color="#3B82F6" />
+            <MetricCard title="Total Revenue"       value="₱875" sub={`Total for ${reportFreq.toLowerCase()}`} icon={TrendingUp}    color="#10B981" />
+            <MetricCard title="Avg. Service Fee"    value="₱47"  sub={`Avg. during ${reportFreq.toLowerCase()}`} icon={DollarSign}    color="#F59E0B" />
           </div>
           <div className="bg-white rounded-2xl shadow-sm p-5" style={{ border: "1px solid #E5E7EB" }}>
-            <h3 className="mb-4" style={{ color: "#1F2937" }}>Daily Sales — March 23, 2026</h3>
+            <h3 className="mb-4" style={{ color: "#1F2937" }}>{reportFreq} Sales Report — {startDate} to {endDate}</h3>
             <table className="w-full">
               <thead>
                 <tr style={{ background: "#F9FAFB" }}>
@@ -904,7 +951,7 @@ function ReportsSection() {
       {tab === "performance" && (
         <div className="bg-white rounded-2xl shadow-sm" style={{ border: "1px solid #E5E7EB" }}>
           <div className="p-5" style={{ borderBottom: "1px solid #F3F4F6" }}>
-            <h3 style={{ color: "#1F2937" }}>Rider Performance — Today</h3>
+            <h3 style={{ color: "#1F2937" }}>Rider Performance — {reportFreq} ({startDate} to {endDate})</h3>
           </div>
           <table className="w-full">
             <thead>
@@ -943,7 +990,7 @@ function ReportsSection() {
 
       {tab === "commission" && (
         <div className="bg-white rounded-2xl shadow-sm p-5" style={{ border: "1px solid #E5E7EB" }}>
-          <h3 className="mb-4" style={{ color: "#1F2937" }}>Commission Log — March 23, 2026</h3>
+          <h3 className="mb-4" style={{ color: "#1F2937" }}>Commission Log — {reportFreq} Summary</h3>
           <table className="w-full">
             <thead>
               <tr style={{ background: "#F9FAFB" }}>
@@ -977,7 +1024,7 @@ function ReportsSection() {
       {tab === "settlement" && (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
           <div className="bg-white rounded-2xl shadow-sm p-6" style={{ border: "1px solid #E5E7EB" }}>
-            <h3 className="mb-4" style={{ color: "#1F2937" }}>End-of-Day Settlement — March 23</h3>
+            <h3 className="mb-4" style={{ color: "#1F2937" }}>{reportFreq} Settlement — {startDate} to {endDate}</h3>
             {[
               { label: "Total Transactions",           value: "10 errands" },
               { label: "Total Capital Deployed",        value: "₱10,370.00" },
