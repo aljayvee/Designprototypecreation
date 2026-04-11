@@ -5,7 +5,7 @@ import {
   MapPin, Phone, Clock, CheckCircle, AlertTriangle, Package,
   ChevronRight, X, FileText, Zap, Navigation, RefreshCw, Save, Printer
 } from "lucide-react";
-import { riders, errands, customers, Errand, ErrandStatus } from "./mockData";
+import { riders, errands, customers, merchants, Errand, ErrandStatus, conversations, ChatMessage } from "./mockData";
 import { NotificationPanel, useNotifications, dispatcherNotifications } from "./NotificationPanel";
 import { toast, Toaster } from "sonner";
 
@@ -310,6 +310,53 @@ function DispatchQueueSection() {
   const [selectedRider, setSelectedRider] = useState<number | null>(null);
   const [assigned, setAssigned] = useState<Record<string, string>>({});
   const [showNewErrand, setShowNewErrand] = useState(false);
+  const [reviewModal, setReviewModal] = useState<Errand | null>(null);
+  const [cdMessages, setCdMessages] = useState<Record<string, ChatMessage[]>>(
+    Object.fromEntries(
+      conversations
+        .filter(c => c.type === "customer-dispatcher")
+        .map(c => [c.errandId, c.messages])
+    )
+  );
+  const [paymentConfirmed, setPaymentConfirmed] = useState<Record<string, boolean>>({});
+
+  React.useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "paymentConfirmed") {
+        try {
+          const data = JSON.parse(e.newValue || "{}");
+          if (data.mode) {
+            toast.success("Customer selected payment mode: " + data.mode);
+            setPaymentConfirmed(prev => ({ ...prev, [data.errandId || "1"]: true }));
+            setCdMessages(prev => {
+              const errandMessages = prev[data.errandId || "1"] || [];
+              const newMsg: ChatMessage = {
+                id: Date.now(),
+                from: "customer",
+                text: `[Selected Payment: ${data.mode}]`,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              };
+              return { ...prev, [data.errandId || "1"]: [...errandMessages, newMsg] };
+            });
+          }
+        } catch(err) {
+          // ignore corrupted payloads
+        }
+      }
+      if (e.key === "chat_c2d" && e.newValue) {
+        try {
+          const msg = JSON.parse(e.newValue);
+          setCdMessages(prev => {
+            const errandMessages = prev["SGO-001"] || []; 
+            return { ...prev, ["SGO-001"]: [...errandMessages, msg] };
+          });
+          localStorage.removeItem("chat_c2d");
+        } catch(err) {}
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
 
   const pendingErrands = errands.filter(e => e.status === "Pending");
   const availableRiders = riders.filter(r => r.status === "Available");
@@ -320,6 +367,7 @@ function DispatchQueueSection() {
     if (rider) {
       setAssigned(prev => ({ ...prev, [assignModal.id]: rider.name }));
       toast.success(`${assignModal.id} dispatched to ${rider.name}!`);
+      localStorage.setItem("riderAssigned", JSON.stringify({ errandId: assignModal.id, ts: Date.now(), riderName: rider.name }));
     }
     setAssignModal(null);
     setSelectedRider(null);
@@ -365,9 +413,6 @@ function DispatchQueueSection() {
       <div className="bg-white rounded-2xl shadow-sm" style={{ border: "1px solid #E5E7EB" }}>
         <div className="p-4 flex items-center justify-between" style={{ borderBottom: "1px solid #F3F4F6" }}>
           <h3 style={{ color: "#1F2937" }}>Pending Errand Queue</h3>
-          <button onClick={() => setShowNewErrand(true)} className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-white" style={{ background: NAVY, fontSize: "0.78rem" }}>
-            <Plus size={14} /> New Errand
-          </button>
         </div>
 
         <div className="divide-y divide-gray-50">
@@ -386,6 +431,28 @@ function DispatchQueueSection() {
                     {errand.amount > 3000 && (
                       <span className="px-2 py-0.5 rounded" style={{ background: "#FEE2E2", color: "#991B1B", fontSize: "0.68rem", fontWeight: 700 }}>HIGH-VALUE</span>
                     )}
+                    {/* Merchant status chip */}
+                    {errand.merchantId && (() => {
+                      const m = merchants.find(x => x.id === errand.merchantId);
+                      if (!m) return null;
+                      const now = new Date();
+                      const cur = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+                      const isAutoClosed = m.status === "Active" && cur > m.operatingHours.close;
+                      const effStatus = m.status === "Inactive" ? "Inactive" : m.status === "Temporarily Closed" ? "Unavailable" : isAutoClosed ? "Closed" : "Available";
+                      const cfg: Record<string,{bg:string;text:string}> = {
+                        Available: { bg: "#D1FAE5", text: "#065F46" },
+                        Unavailable: { bg: "#FEF3C7", text: "#92400E" },
+                        Closed: { bg: "#FEE2E2", text: "#991B1B" },
+                        Inactive: { bg: "#F3F4F6", text: "#6B7280" },
+                      };
+                      const c = cfg[effStatus];
+                      return (
+                        <span title={`Merchant: ${m.businessName}`}
+                          className="px-2 py-0.5 rounded" style={{ background: c.bg, color: c.text, fontSize: "0.68rem", fontWeight: 700 }}>
+                          🏪 {effStatus}
+                        </span>
+                      );
+                    })()}
                   </div>
                   <div className="grid grid-cols-2 gap-x-6 gap-y-1">
                     <div className="flex items-center gap-1.5">
@@ -414,13 +481,23 @@ function DispatchQueueSection() {
                     </p>
                   )}
                 </div>
-                {!assigned[errand.id] && (
+                {!assigned[errand.id] ? (
+                  <div className="flex flex-col gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => setReviewModal(errand)}
+                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-white flex-shrink-0"
+                      style={{ background: NAVY, fontSize: "0.8rem" }}
+                    >
+                      <FileText size={14} /> Review
+                    </button>
+                  </div>
+                ) : (
                   <button
-                    onClick={() => setAssignModal(errand)}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-white flex-shrink-0"
-                    style={{ background: NAVY, fontSize: "0.8rem" }}
+                    onClick={() => setReviewModal(errand)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl flex-shrink-0"
+                    style={{ background: "#EFF6FF", color: NAVY, fontSize: "0.75rem", border: "1px solid #BFDBFE" }}
                   >
-                    <Zap size={14} /> Dispatch
+                    <FileText size={13} /> Chat
                   </button>
                 )}
               </div>
@@ -428,6 +505,109 @@ function DispatchQueueSection() {
           ))}
         </div>
       </div>
+
+      {/* Review Modal (Dispatcher ↔ Customer chat) */}
+      {reviewModal && (() => {
+        const errand = reviewModal;
+        const msgs: ChatMessage[] = cdMessages[errand.id] ?? [];
+        const sendMsg = (text: string) => {
+          const now = new Date();
+          const ts = `${now.getHours()}:${String(now.getMinutes()).padStart(2,"0")} ${now.getHours() >= 12 ? "PM" : "AM"}`;
+          const newMsg: ChatMessage = { id: Date.now(), from: "dispatcher", text, timestamp: ts };
+          setCdMessages(prev => ({ ...prev, [errand.id]: [...(prev[errand.id] ?? []), newMsg] }));
+          localStorage.setItem("chat_d2c", JSON.stringify(newMsg));
+        };
+        return (
+          <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: "rgba(0,0,0,0.55)" }}>
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 flex flex-col" style={{ maxHeight: "90vh" }}>
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid #F3F4F6" }}>
+                <div>
+                  <p style={{ color: "#1F2937", fontWeight: 700, fontSize: "1rem" }}>Review Request — {errand.id}</p>
+                  <p style={{ color: "#9CA3AF", fontSize: "0.72rem" }}>Chat Customer</p>
+                </div>
+                <button onClick={() => setReviewModal(null)} className="p-2 rounded-xl" style={{ background: "#F3F4F6", color: "#6B7280" }}><X size={16} /></button>
+              </div>
+
+              <div className="overflow-y-auto flex-1 px-5 py-3 space-y-3">
+                {/* Errand Summary */}
+                <div className="p-3 rounded-xl" style={{ background: "#F9FAFB", border: "1px solid #E5E7EB" }}>
+                  <p style={{ color: "#1F2937", fontWeight: 600, fontSize: "0.85rem" }}>{errand.customer} — {errand.type}</p>
+                  <p style={{ color: "#6B7280", fontSize: "0.78rem" }}>{errand.address}</p>
+                  <p style={{ color: "#6B7280", fontSize: "0.75rem" }}>{errand.landmark} • {errand.distance} • ₱{errand.amount.toLocaleString()}</p>
+                </div>
+
+                {/* Chat */}
+                <p style={{ color: "#6B7280", fontSize: "0.72rem", fontWeight: 600, letterSpacing: "0.05em" }}>CUSTOMER MESSAGE REQUEST:</p>
+                {msgs.map(msg => {
+                  const isMe = msg.from === "dispatcher";
+                  return (
+                    <div key={msg.id} style={{ display: "flex", flexDirection: "column", alignItems: isMe ? "flex-end" : "flex-start" }}>
+                      {!isMe && <span style={{ fontSize: "0.62rem", color: "#9CA3AF", marginBottom: 2, paddingLeft: 4 }}>{msg.from === "customer" ? "Customer" : "Rider"}</span>}
+                      <div style={{
+                        maxWidth: "78%", padding: "8px 12px",
+                        borderRadius: isMe ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
+                        background: isMe ? NAVY : "#F3F4F6",
+                        color: isMe ? "#fff" : "#1F2937",
+                        fontSize: "0.82rem", lineHeight: 1.5, whiteSpace: "pre-wrap"
+                      }}>{msg.text}</div>
+                      <span style={{ fontSize: "0.62rem", color: "#9CA3AF", marginTop: 2 }}>{msg.timestamp}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Input */}
+              <div className="px-5 pb-3" style={{ borderTop: "1px solid #F3F4F6", paddingTop: 10 }}>
+                <div className="flex gap-2 mb-3">
+                  <input
+                    id="dispatch-chat-input"
+                    placeholder="Type here..."
+                    className="flex-1 px-3 py-2 rounded-xl outline-none"
+                    style={{ background: "#F9FAFB", border: "1.5px solid #E5E7EB", fontSize: "0.83rem", color: "#1F2937" }}
+                    onKeyDown={e => { if (e.key === "Enter") { const el = e.currentTarget; if (el.value.trim()) { sendMsg(el.value.trim()); el.value = ""; } } }}
+                  />
+                  <button
+                    onClick={() => { const el = document.getElementById("dispatch-chat-input") as HTMLInputElement; if (el?.value.trim()) { sendMsg(el.value.trim()); el.value = ""; } }}
+                    className="px-4 py-2 rounded-xl text-white"
+                    style={{ background: NAVY, fontSize: "0.82rem", fontWeight: 600 }}
+                  >Send</button>
+                </div>
+                <div className="flex gap-2 mb-2">
+                  <button
+                    onClick={() => {
+                      localStorage.setItem("requestPayment", JSON.stringify({ ts: Date.now(), errandId: errand.id }));
+                      sendMsg("[Requested Payment Mode]");
+                      toast.success("Payment request sent to customer.");
+                    }}
+                    className="w-full py-2 rounded-xl"
+                    style={{ background: "#F3F4F6", color: "#374151", border: "1px solid #E5E7EB", fontSize: "0.82rem", fontWeight: 600 }}
+                  >
+                    💰 Request Payment Mode
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setAssignModal(errand); setReviewModal(null); }}
+                    disabled={!paymentConfirmed[errand.id]}
+                    className="flex-1 py-2.5 rounded-xl text-white flex items-center justify-center gap-2"
+                    style={{ background: paymentConfirmed[errand.id] ? "#F59E0B" : "#D1D5DB", fontSize: "0.82rem", fontWeight: 600, cursor: paymentConfirmed[errand.id] ? "pointer" : "not-allowed" }}
+                  >
+                    <Bike size={15} /> Assign Rider
+                  </button>
+                  <button
+                    onClick={() => setReviewModal(null)}
+                    className="flex-1 py-2.5 rounded-xl text-white flex items-center justify-center"
+                    style={{ background: NAVY, fontSize: "0.82rem", fontWeight: 600 }}
+                  >
+                    Done Reviewing
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Assign Modal */}
       {assignModal && (

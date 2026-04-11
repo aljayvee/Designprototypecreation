@@ -5,7 +5,7 @@ import {
   Navigation, LogOut, Bell, ChevronRight, Camera, AlertCircle,
   Bike, Star, TrendingUp, Home, ClipboardList, User, X
 } from "lucide-react";
-import { riderCurrentErrand, riderEarnings, errands } from "./mockData";
+import { riderCurrentErrand, riderEarnings, errands, merchants, conversations, ChatMessage } from "./mockData";
 import { NotificationPanel, useNotifications, riderNotifications } from "./NotificationPanel";
 import { toast, Toaster } from "sonner";
 
@@ -30,6 +30,25 @@ export default function RiderPortal() {
   const [uploadedReceipt, setUploadedReceipt] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const { notifications, unreadCount, markAllRead, markRead, dismiss } = useNotifications(riderNotifications);
+  const [showDRChat, setShowDRChat] = useState(false);
+  const [showCRChat, setShowCRChat] = useState(false);
+  const [drMessages, setDrMessages] = useState<ChatMessage[]>(
+    conversations.find(c => c.errandId === riderCurrentErrand.id && c.type === "dispatcher-rider")?.messages ?? []
+  );
+  const [crMessages, setCrMessages] = useState<ChatMessage[]>(
+    conversations.find(c => c.errandId === riderCurrentErrand.id && c.type === "customer-rider")?.messages ?? []
+  );
+
+  const sendDR = (text: string) => {
+    const now = new Date();
+    const ts = `${now.getHours()}:${String(now.getMinutes()).padStart(2,"0")} ${now.getHours()>=12?"PM":"AM"}`;
+    setDrMessages(prev => [...prev, { id: Date.now(), from: "rider", text, timestamp: ts }]);
+  };
+  const sendCR = (text: string) => {
+    const now = new Date();
+    const ts = `${now.getHours()}:${String(now.getMinutes()).padStart(2,"0")} ${now.getHours()>=12?"PM":"AM"}`;
+    setCrMessages(prev => [...prev, { id: Date.now(), from: "rider", text, timestamp: ts }]);
+  };
 
   const stepIndex = STATUS_STEPS.indexOf(currentStatus);
   const isDelivered = currentStatus === "Delivered";
@@ -168,7 +187,16 @@ export default function RiderPortal() {
                       <Package size={16} className="text-white" />
                       <span className="text-white" style={{ fontSize: "0.82rem", fontWeight: 700 }}>Current Assignment</span>
                     </div>
-                    <span className="px-2 py-0.5 rounded-full bg-white" style={{ color: "#DC2626", fontSize: "0.7rem", fontWeight: 700 }}>{errand.id}</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setShowDRChat(true)}
+                        className="px-2 py-1 rounded-lg text-white border border-white border-opacity-40"
+                        style={{ fontSize: "0.68rem", fontWeight: 600, background: "rgba(255,255,255,0.15)" }}
+                      >
+                        💬 Dispatcher
+                      </button>
+                      <span className="px-2 py-0.5 rounded-full bg-white" style={{ color: "#DC2626", fontSize: "0.7rem", fontWeight: 700 }}>{errand.id}</span>
+                    </div>
                   </div>
 
                   <div className="p-4 space-y-3">
@@ -178,6 +206,27 @@ export default function RiderPortal() {
                       <span className="px-2.5 py-1 rounded-full" style={{ background: "#FEF3C7", color: "#92400E", fontSize: "0.72rem", fontWeight: 600 }}>{errand.paymentMode}</span>
                     </div>
 
+                    {/* Merchant Details — shown for Pabili errands with a merchantId */}
+                    {(errand.type === "Pabili" || errand.type === "Bills Payment") && errand.merchantId && (() => {
+                      const m = merchants.find(x => x.id === errand.merchantId);
+                      if (!m) return null;
+                      return (
+                        <div className="p-3 rounded-xl" style={{ background: "#EFF6FF", border: "1px solid #BFDBFE" }}>
+                          <p style={{ color: "#1E40AF", fontSize: "0.68rem", fontWeight: 700, marginBottom: 6, letterSpacing: "0.05em" }}>🏪 MERCHANT DETAILS</p>
+                          <p style={{ color: "#1F2937", fontSize: "0.85rem", fontWeight: 700 }}>{m.businessName}</p>
+                          <p style={{ color: "#374151", fontSize: "0.75rem", marginTop: 2 }}>
+                            {m.purok}, {m.street}, {m.barangay}
+                          </p>
+                          {m.landmark && (
+                            <p style={{ color: "#6B7280", fontSize: "0.72rem", marginTop: 2 }}>📍 {m.landmark}</p>
+                          )}
+                          <p style={{ color: "#374151", fontSize: "0.72rem", marginTop: 4 }}>
+                            🕐 Operating: {m.operatingHours.open} – {m.operatingHours.close}
+                          </p>
+                        </div>
+                      );
+                    })()}
+
                     {/* Customer */}
                     <div className="p-3 rounded-xl" style={{ background: "#F9FAFB" }}>
                       <div className="flex items-start justify-between mb-2">
@@ -185,9 +234,19 @@ export default function RiderPortal() {
                           <p style={{ color: "#1F2937", fontSize: "0.9rem", fontWeight: 700 }}>{errand.customer}</p>
                           <p style={{ color: "#6B7280", fontSize: "0.78rem" }}>{errand.customerPhone}</p>
                         </div>
-                        <a href={`tel:${errand.customerPhone}`} className="p-2 rounded-xl" style={{ background: "#D1FAE5", color: "#065F46" }}>
-                          <Phone size={16} />
-                        </a>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setShowCRChat(true)}
+                            className="p-2 rounded-xl"
+                            style={{ background: "#DBEAFE", color: "#1E40AF" }}
+                            title="Chat Customer"
+                          >
+                            💬
+                          </button>
+                          <a href={`tel:${errand.customerPhone}`} className="p-2 rounded-xl" style={{ background: "#D1FAE5", color: "#065F46" }}>
+                            <Phone size={16} />
+                          </a>
+                        </div>
                       </div>
                       <div className="flex items-start gap-1.5">
                         <MapPin size={14} style={{ color: "#9CA3AF", flexShrink: 0, marginTop: 2 }} />
@@ -445,6 +504,113 @@ export default function RiderPortal() {
             </button>
           ))}
         </div>
+
+        {/* ── DISPATCHER CHAT MODAL ── */}
+        {showDRChat && (() => {
+          let drInput = "";
+          return (
+            <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 50, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+              <div style={{ background: "#fff", borderRadius: "20px 20px 0 0", display: "flex", flexDirection: "column", maxHeight: "80%", overflow: "hidden" }}>
+                {/* Header */}
+                <div style={{ background: "#1E3A5F", padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div>
+                    <p style={{ color: "#fff", fontWeight: 700, fontSize: "0.9rem" }}>💬 Dispatcher</p>
+                    <p style={{ color: "#93C5FD", fontSize: "0.72rem" }}>Re: {errand.id} – {errand.type}</p>
+                  </div>
+                  <button onClick={() => setShowDRChat(false)} style={{ background: "rgba(255,255,255,0.15)", border: "none", color: "#fff", borderRadius: 8, padding: "4px 10px", cursor: "pointer" }}>✕</button>
+                </div>
+                {/* Messages */}
+                <div style={{ flex: 1, overflowY: "auto", padding: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+                  {drMessages.length === 0 && (
+                    <p style={{ color: "#9CA3AF", fontSize: "0.78rem", textAlign: "center", marginTop: 20 }}>No messages yet. Start the conversation!</p>
+                  )}
+                  {drMessages.map(msg => (
+                    <div key={msg.id} style={{ display: "flex", justifyContent: msg.from === "rider" ? "flex-end" : "flex-start" }}>
+                      <div style={{ maxWidth: "75%", padding: "8px 12px", borderRadius: msg.from === "rider" ? "16px 16px 4px 16px" : "16px 16px 16px 4px", background: msg.from === "rider" ? "#1E3A5F" : "#F3F4F6", color: msg.from === "rider" ? "#fff" : "#1F2937", fontSize: "0.82rem" }}>
+                        <p>{msg.text}</p>
+                        <p style={{ fontSize: "0.62rem", color: msg.from === "rider" ? "#93C5FD" : "#9CA3AF", marginTop: 3, textAlign: "right" }}>{msg.timestamp}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Input */}
+                <div style={{ padding: "10px 12px", borderTop: "1px solid #E5E7EB", display: "flex", gap: 8 }}>
+                  <input
+                    id="dr-chat-input"
+                    placeholder="Message dispatcher..."
+                    style={{ flex: 1, padding: "8px 12px", borderRadius: 20, border: "1px solid #D1D5DB", fontSize: "0.82rem", outline: "none" }}
+                    onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                      if (e.key === "Enter") {
+                        const val = (e.target as HTMLInputElement).value.trim();
+                        if (val) { sendDR(val); (e.target as HTMLInputElement).value = ""; }
+                      }
+                    }}
+                  />
+                  <button
+                    style={{ background: "#1E3A5F", color: "#fff", border: "none", borderRadius: 20, padding: "8px 16px", fontWeight: 600, fontSize: "0.82rem", cursor: "pointer" }}
+                    onClick={() => {
+                      const inp = document.getElementById("dr-chat-input") as HTMLInputElement;
+                      if (inp?.value.trim()) { sendDR(inp.value.trim()); inp.value = ""; }
+                    }}
+                  >Send</button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ── CUSTOMER CHAT MODAL ── */}
+        {showCRChat && (() => {
+          return (
+            <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 50, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+              <div style={{ background: "#fff", borderRadius: "20px 20px 0 0", display: "flex", flexDirection: "column", maxHeight: "80%", overflow: "hidden" }}>
+                {/* Header */}
+                <div style={{ background: "#DC2626", padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div>
+                    <p style={{ color: "#fff", fontWeight: 700, fontSize: "0.9rem" }}>💬 {errand.customer}</p>
+                    <p style={{ color: "#FECACA", fontSize: "0.72rem" }}>Customer • {errand.customerPhone}</p>
+                  </div>
+                  <button onClick={() => setShowCRChat(false)} style={{ background: "rgba(255,255,255,0.15)", border: "none", color: "#fff", borderRadius: 8, padding: "4px 10px", cursor: "pointer" }}>✕</button>
+                </div>
+                {/* Messages */}
+                <div style={{ flex: 1, overflowY: "auto", padding: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+                  {crMessages.length === 0 && (
+                    <p style={{ color: "#9CA3AF", fontSize: "0.78rem", textAlign: "center", marginTop: 20 }}>No messages yet. Start the conversation!</p>
+                  )}
+                  {crMessages.map(msg => (
+                    <div key={msg.id} style={{ display: "flex", justifyContent: msg.from === "rider" ? "flex-end" : "flex-start" }}>
+                      <div style={{ maxWidth: "75%", padding: "8px 12px", borderRadius: msg.from === "rider" ? "16px 16px 4px 16px" : "16px 16px 16px 4px", background: msg.from === "rider" ? "#DC2626" : "#F3F4F6", color: msg.from === "rider" ? "#fff" : "#1F2937", fontSize: "0.82rem" }}>
+                        <p>{msg.text}</p>
+                        <p style={{ fontSize: "0.62rem", color: msg.from === "rider" ? "#FECACA" : "#9CA3AF", marginTop: 3, textAlign: "right" }}>{msg.timestamp}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Input */}
+                <div style={{ padding: "10px 12px", borderTop: "1px solid #E5E7EB", display: "flex", gap: 8 }}>
+                  <input
+                    id="cr-chat-input"
+                    placeholder="Message customer..."
+                    style={{ flex: 1, padding: "8px 12px", borderRadius: 20, border: "1px solid #D1D5DB", fontSize: "0.82rem", outline: "none" }}
+                    onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                      if (e.key === "Enter") {
+                        const val = (e.target as HTMLInputElement).value.trim();
+                        if (val) { sendCR(val); (e.target as HTMLInputElement).value = ""; }
+                      }
+                    }}
+                  />
+                  <button
+                    style={{ background: "#DC2626", color: "#fff", border: "none", borderRadius: 20, padding: "8px 16px", fontWeight: 600, fontSize: "0.82rem", cursor: "pointer" }}
+                    onClick={() => {
+                      const inp = document.getElementById("cr-chat-input") as HTMLInputElement;
+                      if (inp?.value.trim()) { sendCR(inp.value.trim()); inp.value = ""; }
+                    }}
+                  >Send</button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
       </div>
     </div>

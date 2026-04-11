@@ -5,7 +5,8 @@ import {
   LogOut, Bell, Search, TrendingUp, Package, DollarSign,
   CheckCircle, Clock, AlertTriangle, AlertCircle, XCircle, Menu, X, Plus, Edit2,
   Trash2, Download, Printer, Eye, RefreshCw, Star, Save,
-  Phone, Shield, ToggleLeft, ToggleRight, Building2, Calendar
+  Phone, Shield, ToggleLeft, ToggleRight, Building2, Calendar, Store, ChevronDown, ChevronUp,
+  MapPin, FileText, Tag
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -13,7 +14,8 @@ import {
 } from "recharts";
 import {
   riders, errands, customers, revenueData, weeklyData, serviceTypeData,
-  rateConfig, Errand, Rider, Customer, ErrandStatus
+  rateConfig, merchants as initialMerchants,
+  Errand, Rider, Customer, ErrandStatus, Merchant, MerchantStatus, MerchantCategory, MerchantAuditEntry
 } from "./mockData";
 import { NotificationPanel, useNotifications, ownerNotifications } from "./NotificationPanel";
 import { toast, Toaster } from "sonner";
@@ -40,13 +42,14 @@ const riderStatusConfig: Record<string, { bg: string; text: string; dot: string 
 };
 
 const navItems = [
-  { id: "dashboard", label: "Dashboard",        icon: LayoutDashboard },
-  { id: "errands",   label: "Errand Management",icon: ClipboardList },
-  { id: "users",     label: "User Management",  icon: Users },
-  { id: "riders",    label: "Rider Management", icon: Bike },
-  { id: "rates",     label: "Rate Management",  icon: DollarSign },
-  { id: "reports",   label: "Reports",          icon: BarChart2 },
-  { id: "settings",  label: "Settings",         icon: Settings },
+  { id: "dashboard", label: "Dashboard",          icon: LayoutDashboard },
+  { id: "errands",   label: "Errand Management",  icon: ClipboardList },
+  { id: "users",     label: "User Management",    icon: Users },
+  { id: "riders",    label: "Rider Management",   icon: Bike },
+  { id: "merchants", label: "Merchant Category",  icon: Store },
+  { id: "rates",     label: "Rate Management",    icon: DollarSign },
+  { id: "reports",   label: "Reports",            icon: BarChart2 },
+  { id: "settings",  label: "Settings",           icon: Settings },
 ];
 
 function StatusBadge({ status }: { status: ErrandStatus }) {
@@ -1514,6 +1517,468 @@ function SettingsSection() {
   );
 }
 
+// ─── MERCHANTS SECTION ────────────────────────────────────────────────────────
+function MerchantsSection() {
+  const [merchantList, setMerchantList] = React.useState<Merchant[]>(initialMerchants);
+  const [search, setSearch] = React.useState("");
+  const [filterCat, setFilterCat] = React.useState<MerchantCategory | "All">("All");
+  const [filterStatus, setFilterStatus] = React.useState<MerchantStatus | "All">("All");
+  const [showModal, setShowModal] = React.useState(false);
+  const [editTarget, setEditTarget] = React.useState<Merchant | null>(null);
+  const [expandedAudit, setExpandedAudit] = React.useState<number | null>(null);
+  const [confirmDelete, setConfirmDelete] = React.useState<Merchant | null>(null);
+
+  const now = new Date();
+  const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+  const isAutoClosedByTime = (m: Merchant) =>
+    m.status === "Active" && m.operatingHours.close && currentTime > m.operatingHours.close;
+
+  const getEffectiveStatus = (m: Merchant): { label: string; bg: string; text: string } => {
+    if (m.status === "Inactive") return { label: "Inactive", bg: "#F3F4F6", text: "#6B7280" };
+    if (m.status === "Temporarily Closed") return { label: "Temporarily Closed", bg: "#FEF3C7", text: "#92400E" };
+    if (isAutoClosedByTime(m)) return { label: "Auto-Closed", bg: "#FEE2E2", text: "#991B1B" };
+    return { label: "Active", bg: "#D1FAE5", text: "#065F46" };
+  };
+
+  const filteredMerchants = merchantList.filter(m => {
+    const matchSearch = m.businessName.toLowerCase().includes(search.toLowerCase()) ||
+      m.barangay.toLowerCase().includes(search.toLowerCase());
+    const matchCat = filterCat === "All" || m.categories.includes(filterCat);
+    const matchStatus = filterStatus === "All" || m.status === filterStatus;
+    return matchSearch && matchCat && matchStatus;
+  });
+
+  const totalActive  = merchantList.filter(m => m.status === "Active" && !isAutoClosedByTime(m)).length;
+  const totalInactive = merchantList.filter(m => m.status !== "Active" || isAutoClosedByTime(m)).length;
+  const errandCounts = merchantList.map(m => ({
+    id: m.id,
+    count: errands.filter(e => e.merchantId === m.id).length,
+  }));
+  const popular = errandCounts.sort((a, b) => b.count - a.count)[0];
+  const popularMerchant = merchantList.find(m => m.id === popular?.id);
+
+  const handleToggleStatus = (m: Merchant, manual?: boolean) => {
+    const now2 = new Date();
+    const ts = now2.toLocaleString("en-PH", { hour12: true, dateStyle: "short", timeStyle: "short" });
+    setMerchantList(prev => prev.map(x => {
+      if (x.id !== m.id) return x;
+      const newStatus: MerchantStatus = manual
+        ? (x.status === "Active" ? "Temporarily Closed" : "Active")
+        : (x.status === "Active" ? "Inactive" : "Active");
+      const action = manual
+        ? (newStatus === "Temporarily Closed" ? "Manually flagged as Temporarily Closed" : "Status restored to Active")
+        : (newStatus === "Inactive" ? "Status changed: Active → Inactive" : "Status changed: Inactive → Active");
+      return {
+        ...x,
+        status: newStatus,
+        updatedAt: now2.toISOString().split("T")[0],
+        auditLog: [...x.auditLog, { timestamp: ts, action, by: "Aljayvee Versola" }],
+      };
+    }));
+    toast.success(`Merchant status updated.`);
+  };
+
+  const handleDelete = (m: Merchant) => {
+    setMerchantList(prev => prev.filter(x => x.id !== m.id));
+    setConfirmDelete(null);
+    toast.success(`"${m.businessName}" removed from the merchant list.`);
+  };
+
+  const categoryColor: Record<MerchantCategory, { bg: string; text: string }> = {
+    "Pabili":       { bg: "#DBEAFE", text: "#1E40AF" },
+    "Bills Payment":{ bg: "#FEF3C7", text: "#92400E" },
+  };
+
+  return (
+    <div className="space-y-5">
+      {/* Analytics Row */}
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+        <MetricCard title="Total Merchants"   value={String(merchantList.length)} sub="Registered in system"     icon={Store}        color="#3B82F6" />
+        <MetricCard title="Active Now"        value={String(totalActive)}         sub="Open & operating"         icon={CheckCircle}  color="#10B981" />
+        <MetricCard title="Closed / Inactive" value={String(totalInactive)}       sub="Unavailable"              icon={XCircle}      color="#EF4444" />
+        <MetricCard title="Most Popular"      value={popularMerchant?.businessName.split(" ").slice(0,2).join(" ") ?? "—"}
+                    sub={popularMerchant ? `${errandCounts[0]?.count ?? 0} errand(s)` : "No data"}
+                    icon={TrendingUp} color="#8B5CF6" />
+      </div>
+
+      {/* Controls */}
+      <div className="bg-white rounded-2xl p-4 shadow-sm flex flex-wrap items-center gap-3" style={{ border: "1px solid #E5E7EB" }}>
+        <div className="relative flex-1 min-w-48">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#9CA3AF" }} />
+          <input
+            type="text" placeholder="Search merchants..."
+            value={search} onChange={e => setSearch(e.target.value)}
+            className="w-full pl-9 pr-3 py-2 rounded-xl outline-none"
+            style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", fontSize: "0.85rem", color: "#1F2937" }}
+          />
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          {(["All", "Pabili", "Padala", "Bills Payment"] as const).map(c => (
+            <button key={c} onClick={() => setFilterCat(c as any)}
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+              style={{ background: filterCat === c ? NAVY : "#F3F4F6", color: filterCat === c ? "#fff" : "#374151" }}>
+              {c}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-2 flex-wrap">
+          {(["All", "Active", "Inactive", "Temporarily Closed"] as const).map(s => (
+            <button key={s} onClick={() => setFilterStatus(s as any)}
+              className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+              style={{ background: filterStatus === s ? "#374151" : "#F3F4F6", color: filterStatus === s ? "#fff" : "#6B7280" }}>
+              {s}
+            </button>
+          ))}
+        </div>
+        <button onClick={() => { setEditTarget(null); setShowModal(true); }}
+          className="ml-auto flex items-center gap-2 px-4 py-2 rounded-xl text-white"
+          style={{ background: NAVY, fontSize: "0.85rem", fontWeight: 600 }}>
+          <Plus size={16} /> Add Merchant
+        </button>
+      </div>
+
+      {/* Merchant Table */}
+      <div className="bg-white rounded-2xl shadow-sm overflow-hidden" style={{ border: "1px solid #E5E7EB" }}>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr style={{ background: "#F9FAFB" }}>
+                {["Business Name", "Categories", "Location", "Operating Hours", "Status", "Actions"].map(h => (
+                  <th key={h} className="px-4 py-3 text-left whitespace-nowrap"
+                    style={{ color: "#6B7280", fontSize: "0.75rem", fontWeight: 600 }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filteredMerchants.length === 0 && (
+                <tr><td colSpan={6} className="px-4 py-10 text-center" style={{ color: "#9CA3AF", fontSize: "0.85rem" }}>No merchants found.</td></tr>
+              )}
+              {filteredMerchants.map((m, i) => {
+                const eff = getEffectiveStatus(m);
+                const autoClosed = isAutoClosedByTime(m);
+                return (
+                  <React.Fragment key={m.id}>
+                    <tr style={{ borderTop: i > 0 ? "1px solid #F3F4F6" : "none" }}>
+                      <td className="px-4 py-3">
+                        <div style={{ fontWeight: 600, color: NAVY, fontSize: "0.85rem" }}>{m.businessName}</div>
+                        <div style={{ color: "#9CA3AF", fontSize: "0.72rem" }}>ID: MCH-{String(m.id).padStart(3, "0")}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap gap-1">
+                          {m.categories.map(cat => (
+                            <span key={cat} className="px-2 py-0.5 rounded-full"
+                              style={{ background: categoryColor[cat].bg, color: categoryColor[cat].text, fontSize: "0.68rem", fontWeight: 600 }}>
+                              {cat}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div style={{ color: "#374151", fontSize: "0.82rem" }}>{m.barangay}</div>
+                        <div style={{ color: "#9CA3AF", fontSize: "0.72rem" }}>{m.city}</div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div style={{ color: "#374151", fontSize: "0.82rem" }}>{m.operatingHours.open} – {m.operatingHours.close}</div>
+                        {autoClosed && <div style={{ color: "#EF4444", fontSize: "0.68rem", fontWeight: 600 }}>⏰ Past closing time</div>}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="px-2.5 py-1 rounded-full"
+                          style={{ background: eff.bg, color: eff.text, fontSize: "0.72rem", fontWeight: 600 }}>
+                          {eff.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5">
+                          <button onClick={() => { setEditTarget(m); setShowModal(true); }}
+                            className="p-1.5 rounded-lg" style={{ background: "#EFF6FF", color: "#1D4ED8" }}
+                            title="Edit">
+                            <Edit2 size={13} />
+                          </button>
+                          <button onClick={() => handleToggleStatus(m, false)}
+                            className="p-1.5 rounded-lg" title={m.status === "Active" ? "Deactivate" : "Activate"}
+                            style={{ background: m.status === "Active" ? "#FEE2E2" : "#D1FAE5", color: m.status === "Active" ? "#991B1B" : "#065F46" }}>
+                            {m.status === "Active" ? <ToggleRight size={13} /> : <ToggleLeft size={13} />}
+                          </button>
+                          {m.status === "Active" && !autoClosed && (
+                            <button onClick={() => handleToggleStatus(m, true)}
+                              className="px-2 py-1 rounded-lg text-xs font-semibold"
+                              style={{ background: "#FEF3C7", color: "#92400E", fontSize: "0.68rem" }}
+                              title="Flag as temporarily unavailable">
+                              Flag Unavailable
+                            </button>
+                          )}
+                          {m.status === "Temporarily Closed" && (
+                            <button onClick={() => handleToggleStatus(m, true)}
+                              className="px-2 py-1 rounded-lg text-xs font-semibold"
+                              style={{ background: "#D1FAE5", color: "#065F46", fontSize: "0.68rem" }}>
+                              Restore
+                            </button>
+                          )}
+                          <button onClick={() => setExpandedAudit(expandedAudit === m.id ? null : m.id)}
+                            className="p-1.5 rounded-lg" style={{ background: "#F3F4F6", color: "#6B7280" }} title="Audit Log">
+                            {expandedAudit === m.id ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                          </button>
+                          <button onClick={() => setConfirmDelete(m)}
+                            className="p-1.5 rounded-lg" style={{ background: "#FEE2E2", color: "#991B1B" }} title="Delete">
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {expandedAudit === m.id && (
+                      <tr>
+                        <td colSpan={6} style={{ background: "#F9FAFB", borderTop: "1px solid #F3F4F6" }}>
+                          <div className="px-6 py-3">
+                            <p style={{ color: "#374151", fontSize: "0.78rem", fontWeight: 700, marginBottom: 8 }}>
+                              📋 Audit Log — {m.businessName}
+                            </p>
+                            <div className="space-y-1.5">
+                              {m.auditLog.map((log, li) => (
+                                <div key={li} className="flex items-start gap-3">
+                                  <span style={{ color: "#9CA3AF", fontSize: "0.72rem", minWidth: 160, whiteSpace: "nowrap" }}>{log.timestamp}</span>
+                                  <span style={{ color: "#374151", fontSize: "0.75rem" }}>{log.action}</span>
+                                  <span style={{ color: "#9CA3AF", fontSize: "0.72rem", marginLeft: "auto" }}>by {log.by}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Add / Edit Modal */}
+      {showModal && (
+        <MerchantFormModal
+          existing={editTarget}
+          allMerchants={merchantList}
+          onClose={() => setShowModal(false)}
+          onSave={(updated) => {
+            if (editTarget) {
+              setMerchantList(prev => prev.map(x => x.id === updated.id ? updated : x));
+              toast.success(`"${updated.businessName}" updated successfully.`);
+            } else {
+              setMerchantList(prev => [...prev, updated]);
+              toast.success(`"${updated.businessName}" added to the merchant list.`);
+            }
+            setShowModal(false);
+            setEditTarget(null);
+          }}
+        />
+      )}
+
+      {/* Delete Confirmation */}
+      {confirmDelete && (
+        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: "rgba(0,0,0,0.5)" }}>
+          <div className="bg-white rounded-2xl p-6 shadow-2xl max-w-sm w-full mx-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: "#FEE2E2" }}>
+                <Trash2 size={20} style={{ color: "#EF4444" }} />
+              </div>
+              <div>
+                <p style={{ color: "#1F2937", fontWeight: 700 }}>Remove Merchant?</p>
+                <p style={{ color: "#6B7280", fontSize: "0.8rem" }}>This action cannot be undone.</p>
+              </div>
+            </div>
+            <p style={{ color: "#374151", fontSize: "0.85rem", marginBottom: 16 }}>
+              Are you sure you want to remove <strong>"{confirmDelete.businessName}"</strong> from the merchant list?
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmDelete(null)}
+                className="flex-1 py-2.5 rounded-xl" style={{ background: "#F3F4F6", color: "#374151", fontWeight: 600, fontSize: "0.85rem" }}>
+                Cancel
+              </button>
+              <button onClick={() => handleDelete(confirmDelete)}
+                className="flex-1 py-2.5 rounded-xl text-white" style={{ background: "#EF4444", fontWeight: 600, fontSize: "0.85rem" }}>
+                Yes, Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Merchant Add/Edit Form Modal
+function MerchantFormModal({
+  existing, allMerchants, onClose, onSave,
+}: {
+  existing: Merchant | null;
+  allMerchants: Merchant[];
+  onClose: () => void;
+  onSave: (m: Merchant) => void;
+}) {
+  const [businessName, setBusinessName] = React.useState(existing?.businessName ?? "");
+  const [categories, setCategories] = React.useState<MerchantCategory[]>(existing?.categories ?? []);
+  const [city, setCity] = React.useState(existing?.city ?? "Tacurong City");
+  const [municipality, setMunicipality] = React.useState(existing?.municipality ?? "Tacurong");
+  const [barangay, setBarangay] = React.useState(existing?.barangay ?? "");
+  const [purok, setPurok] = React.useState(existing?.purok ?? "");
+  const [street, setStreet] = React.useState(existing?.street ?? "");
+  const [landmark, setLandmark] = React.useState(existing?.landmark ?? "");
+  const [description, setDescription] = React.useState(existing?.description ?? "");
+  const [openTime, setOpenTime] = React.useState(existing?.operatingHours.open ?? "08:00");
+  const [closeTime, setCloseTime] = React.useState(existing?.operatingHours.close ?? "18:00");
+  const [status, setStatus] = React.useState<MerchantStatus>(existing?.status ?? "Active");
+  const [error, setError] = React.useState("");
+
+  const toggleCategory = (cat: MerchantCategory) => {
+    setCategories(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
+  };
+
+  const handleSave = () => {
+    if (!businessName.trim()) { setError("Business name is required."); return; }
+    if (categories.length === 0) { setError("Select at least one category."); return; }
+    if (!barangay.trim()) { setError("Barangay is required."); return; }
+
+    // Duplicate check
+    const duplicate = allMerchants.find(m =>
+      m.businessName.trim().toLowerCase() === businessName.trim().toLowerCase() && m.id !== existing?.id
+    );
+    if (duplicate) { setError(`A merchant named "${duplicate.businessName}" already exists.`); return; }
+
+    const now2 = new Date();
+    const ts = now2.toLocaleString("en-PH", { hour12: true, dateStyle: "short", timeStyle: "short" });
+    const newMerchant: Merchant = {
+      id: existing?.id ?? (Date.now()),
+      businessName: businessName.trim(),
+      categories,
+      city, municipality, barangay, purok, street, landmark, description,
+      operatingHours: { open: openTime, close: closeTime },
+      status,
+      createdAt: existing?.createdAt ?? now2.toISOString().split("T")[0],
+      updatedAt: now2.toISOString().split("T")[0],
+      auditLog: existing
+        ? [...existing.auditLog, { timestamp: ts, action: "Merchant details updated", by: "Aljayvee Versola" }]
+        : [{ timestamp: ts, action: "Merchant created", by: "Aljayvee Versola" }],
+    };
+    onSave(newMerchant);
+  };
+
+  const catColors: Record<MerchantCategory, { bg: string; text: string; sel: string }> = {
+    "Pabili":       { bg: "#EFF6FF", text: "#1E40AF", sel: "#DBEAFE" },
+    "Padala":       { bg: "#F0FDF4", text: "#065F46", sel: "#D1FAE5" },
+    "Bills Payment":{ bg: "#FFFBEB", text: "#92400E", sel: "#FEF3C7" },
+  };
+
+  const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
+    <div>
+      <label style={{ color: "#6B7280", fontSize: "0.72rem", fontWeight: 600, letterSpacing: "0.05em", display: "block", marginBottom: 4 }}>{label}</label>
+      {children}
+    </div>
+  );
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%", padding: "8px 12px", borderRadius: 10, outline: "none",
+    background: "#F9FAFB", border: "1.5px solid #E5E7EB",
+    fontSize: "0.85rem", color: "#1F2937",
+  };
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: "rgba(0,0,0,0.55)" }}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full flex flex-col" style={{ maxWidth: 680, maxHeight: "92vh" }}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: "1px solid #F3F4F6" }}>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: NAVY + "15" }}>
+              <Store size={18} style={{ color: NAVY }} />
+            </div>
+            <div>
+              <p style={{ color: "#1F2937", fontWeight: 700 }}>{existing ? "Edit Merchant" : "Add New Merchant"}</p>
+              <p style={{ color: "#9CA3AF", fontSize: "0.72rem" }}>Fill in the merchant details below</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-xl" style={{ background: "#F3F4F6", color: "#6B7280" }}><X size={16} /></button>
+        </div>
+
+        {/* Body */}
+        <div className="overflow-y-auto px-6 py-5 space-y-4">
+          {error && (
+            <div className="px-4 py-3 rounded-xl flex items-center gap-2" style={{ background: "#FEE2E2", color: "#991B1B", fontSize: "0.82rem" }}>
+              <AlertCircle size={15} /> {error}
+            </div>
+          )}
+
+          <Field label="BUSINESS NAME *">
+            <input style={inputStyle} value={businessName} onChange={e => setBusinessName(e.target.value)} placeholder="e.g. Aling Rosa's Sari-Sari Store" />
+          </Field>
+
+          <Field label="SERVICE CATEGORIES *">
+            <div className="flex gap-2 flex-wrap mt-1">
+              {(["Pabili", "Bills Payment"] as MerchantCategory[]).map(cat => {
+                const sel = categories.includes(cat);
+                const c = catColors[cat];
+                return (
+                  <button key={cat} onClick={() => toggleCategory(cat)}
+                    className="px-4 py-2 rounded-xl font-semibold transition-all"
+                    style={{ background: sel ? c.sel : c.bg, color: c.text, fontSize: "0.82rem", border: sel ? `2px solid ${c.text}` : "2px solid transparent" }}>
+                    {cat} {sel && "✓"}
+                  </button>
+                );
+              })}
+            </div>
+          </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="CITY"><input style={inputStyle} value={city} onChange={e => setCity(e.target.value)} /></Field>
+            <Field label="MUNICIPALITY"><input style={inputStyle} value={municipality} onChange={e => setMunicipality(e.target.value)} /></Field>
+            <Field label="BARANGAY *"><input style={inputStyle} value={barangay} onChange={e => setBarangay(e.target.value)} placeholder="e.g. Brgy. Calean" /></Field>
+            <Field label="PUROK"><input style={inputStyle} value={purok} onChange={e => setPurok(e.target.value)} placeholder="e.g. Purok 3" /></Field>
+            <Field label="STREET"><input style={inputStyle} value={street} onChange={e => setStreet(e.target.value)} /></Field>
+            <Field label="LANDMARK"><input style={inputStyle} value={landmark} onChange={e => setLandmark(e.target.value)} placeholder="e.g. Near SM Sultan Kudarat" /></Field>
+          </div>
+
+          <Field label="DESCRIPTION">
+            <textarea style={{ ...inputStyle, minHeight: 72, resize: "vertical" }} value={description} onChange={e => setDescription(e.target.value)} placeholder="Brief description of services offered..." />
+          </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="OPENING TIME"><input type="time" style={inputStyle} value={openTime} onChange={e => setOpenTime(e.target.value)} /></Field>
+            <Field label="CLOSING TIME"><input type="time" style={inputStyle} value={closeTime} onChange={e => setCloseTime(e.target.value)} /></Field>
+          </div>
+
+          <Field label="STATUS">
+            <div className="flex gap-2">
+              {(["Active", "Inactive"] as MerchantStatus[]).map(s => (
+                <button key={s} onClick={() => setStatus(s)}
+                  className="px-4 py-2 rounded-xl font-semibold"
+                  style={{
+                    background: status === s ? (s === "Active" ? "#D1FAE5" : "#F3F4F6") : "#F9FAFB",
+                    color: status === s ? (s === "Active" ? "#065F46" : "#374151") : "#9CA3AF",
+                    border: status === s ? `2px solid ${s === "Active" ? "#10B981" : "#9CA3AF"}` : "2px solid transparent",
+                    fontSize: "0.82rem",
+                  }}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          </Field>
+        </div>
+
+        {/* Footer */}
+        <div className="flex gap-3 px-6 py-4" style={{ borderTop: "1px solid #F3F4F6" }}>
+          <button onClick={onClose} className="flex-1 py-2.5 rounded-xl"
+            style={{ background: "#F3F4F6", color: "#374151", fontWeight: 600, fontSize: "0.85rem" }}>
+            Cancel
+          </button>
+          <button onClick={handleSave} className="flex-1 py-2.5 rounded-xl text-white"
+            style={{ background: NAVY, fontWeight: 600, fontSize: "0.85rem" }}>
+            {existing ? "Save Changes" : "Add Merchant"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── MAIN OWNER PORTAL ───────────────────────────────────────────────────────
 export default function OwnerPortal() {
   const navigate = useNavigate();
@@ -1527,6 +1992,7 @@ export default function OwnerPortal() {
     errands:   "Errand Management",
     users:     "User Management",
     riders:    "Rider Management",
+    merchants: "Merchant Category",
     rates:     "Rate Management",
     reports:   "Reports",
     settings:  "Settings",
@@ -1649,6 +2115,7 @@ export default function OwnerPortal() {
           {activeSection === "errands"   && <ErrandsSection />}
           {activeSection === "users"     && <UsersSection />}
           {activeSection === "riders"    && <RidersSection />}
+          {activeSection === "merchants" && <MerchantsSection />}
           {activeSection === "rates"     && <RatesSection />}
           {activeSection === "reports"   && <ReportsSection />}
           {activeSection === "settings"  && <SettingsSection />}

@@ -61,6 +61,32 @@ export type ErrandStatus =
   | "Cancelled";
 export type ErrandType = "Pabili" | "Padala" | "Bills Payment";
 export type PaymentMode = "Cash on Delivery" | "GCash" | "Bank Transfer";
+export type MerchantStatus = "Active" | "Inactive" | "Temporarily Closed";
+export type MerchantCategory = "Pabili" | "Padala" | "Bills Payment";
+
+export interface MerchantAuditEntry {
+  timestamp: string;
+  action: string;
+  by: string;
+}
+
+export interface Merchant {
+  id: number;
+  businessName: string;
+  categories: MerchantCategory[];
+  city: string;
+  municipality: string;
+  barangay: string;
+  purok: string;
+  street: string;
+  landmark: string;
+  description: string;
+  operatingHours: { open: string; close: string };
+  status: MerchantStatus;
+  createdAt: string;
+  updatedAt: string;
+  auditLog: MerchantAuditEntry[];
+}
 
 export interface Rider {
   id: number;
@@ -86,6 +112,8 @@ export interface Errand {
   status: ErrandStatus;
   riderId?: number;
   riderName?: string;
+  merchantId?: number;
+  merchantName?: string;
   amount: number;
   serviceFee: number;
   commission?: number;
@@ -95,6 +123,61 @@ export interface Errand {
   distance?: string;
   storeCount?: number;
 }
+
+// ─── MESSAGING ────────────────────────────────────────────────────────────────
+export type ChatRole = "customer" | "dispatcher" | "rider";
+
+export interface ChatMessage {
+  id: number;
+  from: ChatRole;
+  text: string;
+  timestamp: string;
+}
+
+export interface Conversation {
+  id: string;
+  errandId: string;
+  type: "customer-dispatcher" | "dispatcher-rider" | "customer-rider";
+  messages: ChatMessage[];
+}
+
+export const conversations: Conversation[] = [
+  {
+    id: "conv-cd-001",
+    errandId: "SGO-001",
+    type: "customer-dispatcher",
+    messages: [
+      { id: 1, from: "dispatcher", text: "Hi! I am your dispatcher. What can I help you with today?", timestamp: "10:31 AM" },
+      { id: 2, from: "customer", text: "I'd like to request a Pabili. Can you buy Pizza from Parties Tesoro Place and 1 can of Prito Sardines from the grocery?", timestamp: "10:32 AM" },
+      { id: 3, from: "dispatcher", text: "Noted. Your total will be 890 pesos. Will you be paying via Cash on Delivery?", timestamp: "10:33 AM" },
+      { id: 4, from: "customer", text: "Yes, COD is fine.", timestamp: "10:34 AM" },
+      { id: 5, from: "dispatcher", text: "Great! Please click the payment mode button below to confirm your order.", timestamp: "10:35 AM" },
+      { id: 6, from: "dispatcher", text: "I have assigned rider Al-Dhen Musali to your request.", timestamp: "10:36 AM" },
+    ],
+  },
+  {
+    id: "conv-dr-001",
+    errandId: "SGO-001",
+    type: "dispatcher-rider",
+    messages: [
+      { id: 1, from: "dispatcher", text: "Hey Al-Dhen, please pick up the Pabili order from Sago on the Go. Customer is Jiane Gamboa.", timestamp: "10:37 AM" },
+      { id: 2, from: "rider", text: "Noted po. On my way to Parties Tesoro Place now.", timestamp: "10:38 AM" },
+      { id: 3, from: "dispatcher", text: "Customer prefers COD. Total is ₱890. Please have change ready.", timestamp: "10:39 AM" },
+      { id: 4, from: "rider", text: "Understood. Will update once items are purchased.", timestamp: "10:40 AM" },
+    ],
+  },
+  {
+    id: "conv-cr-001",
+    errandId: "SGO-001",
+    type: "customer-rider",
+    messages: [
+      { id: 1, from: "rider", text: "Hi! I'm Al-Dhen, your assigned rider. I'm now heading to the store.", timestamp: "10:38 AM" },
+      { id: 2, from: "customer", text: "Great! Please make sure to get the right size conditioner — 300ml.", timestamp: "10:39 AM" },
+      { id: 3, from: "rider", text: "Got it! 300ml conditioner noted. I'll send a photo before departing the store.", timestamp: "10:40 AM" },
+      { id: 4, from: "customer", text: "Thank you so much!", timestamp: "10:41 AM" },
+    ],
+  },
+];
 
 export interface Customer {
   id: number;
@@ -213,3 +296,201 @@ export const riderEarnings = {
   week: { trips: 32, baseFee: 1480, commission: 320, total: 1800 },
   month: { trips: 128, baseFee: 5920, commission: 1280, total: 7200 },
 };
+
+export const merchants: Merchant[] = [
+  {
+    id: 1,
+    businessName: "Aling Rosa's Sari-Sari Store",
+    categories: ["Pabili"],
+    city: "Tacurong City",
+    municipality: "Tacurong",
+    barangay: "Brgy. Calean",
+    purok: "Purok 3",
+    street: "Maharlika Highway",
+    landmark: "Near SM Sultan Kudarat",
+    description: "General merchandise store offering a wide variety of grocery items and daily essentials.",
+    operatingHours: { open: "06:00", close: "21:00" },
+    status: "Active",
+    createdAt: "2026-01-10",
+    updatedAt: "2026-04-07",
+    auditLog: [
+      { timestamp: "2026-01-10 09:00 AM", action: "Merchant created", by: "Aljayvee Versola" },
+      { timestamp: "2026-04-07 10:30 AM", action: "Operating hours updated (06:00–21:00)", by: "Aljayvee Versola" },
+    ],
+  },
+  {
+    id: 2,
+    businessName: "BDO / Bayad Center Tacurong",
+    categories: ["Bills Payment"],
+    city: "Tacurong City",
+    municipality: "Tacurong",
+    barangay: "Brgy. Edsa",
+    purok: "Purok 1",
+    street: "National Highway",
+    landmark: "Near BDO ATM, Ground Floor Tacurong Commercial Center",
+    description: "Authorized bills payment center for utilities, telco, insurance, and government fees.",
+    operatingHours: { open: "08:00", close: "17:00" },
+    status: "Active",
+    createdAt: "2026-01-15",
+    updatedAt: "2026-03-20",
+    auditLog: [
+      { timestamp: "2026-01-15 08:30 AM", action: "Merchant created", by: "Aljayvee Versola" },
+    ],
+  },
+  {
+    id: 3,
+    businessName: "Rose Pharmacy Isulan Branch",
+    categories: ["Pabili"],
+    city: "Isulan",
+    municipality: "Isulan",
+    barangay: "Brgy. Tina",
+    purok: "Purok 2",
+    street: "Quezon Ave.",
+    landmark: "Corner shop near Holy Child Parish Church",
+    description: "Full-service pharmacy offering prescription and OTC medicines, vitamins, and health supplies.",
+    operatingHours: { open: "07:00", close: "22:00" },
+    status: "Active",
+    createdAt: "2026-01-20",
+    updatedAt: "2026-02-14",
+    auditLog: [
+      { timestamp: "2026-01-20 11:00 AM", action: "Merchant created", by: "Aljayvee Versola" },
+    ],
+  },
+  {
+    id: 4,
+    businessName: "GM Supermarket Tacurong",
+    categories: ["Pabili"],
+    city: "Tacurong City",
+    municipality: "Tacurong",
+    barangay: "Brgy. Poblacion",
+    purok: "Purok 5",
+    street: "Mabini Street",
+    landmark: "Next to Municipal Hall",
+    description: "Mid-size supermarket with wide selection of fresh produce, deli, and household goods.",
+    operatingHours: { open: "08:00", close: "20:00" },
+    status: "Active",
+    createdAt: "2026-02-01",
+    updatedAt: "2026-04-01",
+    auditLog: [
+      { timestamp: "2026-02-01 09:00 AM", action: "Merchant created", by: "Aljayvee Versola" },
+      { timestamp: "2026-04-01 03:00 PM", action: "Status changed: Inactive → Active", by: "Aljayvee Versola" },
+    ],
+  },
+  {
+    id: 5,
+    businessName: "Palawan Pawnshop & Padala Center",
+    categories: ["Bills Payment"],
+    city: "Tacurong City",
+    municipality: "Tacurong",
+    barangay: "Brgy. New Isabela",
+    purok: "Purok 1",
+    street: "Rizal Street",
+    landmark: "Red roof stall near Tacurong Elementary School",
+    description: "Remittance, bills payment, and pawnshop services. Accepts SSS, PhilHealth, Meralco, DITO, Globe, Smart payments.",
+    operatingHours: { open: "08:00", close: "18:00" },
+    status: "Active",
+    createdAt: "2026-02-05",
+    updatedAt: "2026-02-05",
+    auditLog: [
+      { timestamp: "2026-02-05 09:30 AM", action: "Merchant created", by: "Aljayvee Versola" },
+    ],
+  },
+  {
+    id: 6,
+    businessName: "Mang Tino's Mini Grocery",
+    categories: ["Pabili"],
+    city: "Tacurong City",
+    municipality: "Tacurong",
+    barangay: "Brgy. Buenaflor",
+    purok: "Purok 4",
+    street: "Barangay Road",
+    landmark: "Blue gate near sari-sari store cluster",
+    description: "Neighborhood grocery known for competitive pricing on goods, snacks and beverages.",
+    operatingHours: { open: "07:00", close: "20:00" },
+    status: "Active",
+    createdAt: "2026-02-10",
+    updatedAt: "2026-03-15",
+    auditLog: [
+      { timestamp: "2026-02-10 08:00 AM", action: "Merchant created", by: "Aljayvee Versola" },
+      { timestamp: "2026-03-15 06:00 PM", action: "Marked Temporarily Closed (early closing due to inventory)", by: "Aljayvee Versola" },
+      { timestamp: "2026-03-16 07:15 AM", action: "Status restored to Active", by: "Aljayvee Versola" },
+    ],
+  },
+  {
+    id: 7,
+    businessName: "DITO & Globe Payment Hub",
+    categories: ["Bills Payment", "Pabili"],
+    city: "Tacurong City",
+    municipality: "Tacurong",
+    barangay: "Brgy. Kakar",
+    purok: "Purok 2",
+    street: "Guerrero Street",
+    landmark: "White bungalow near Kakar basketball court",
+    description: "Multi-service hub accepting telecom load, bills, and basic grocery top-ups.",
+    operatingHours: { open: "08:00", close: "20:00" },
+    status: "Active",
+    createdAt: "2026-02-18",
+    updatedAt: "2026-02-18",
+    auditLog: [
+      { timestamp: "2026-02-18 10:00 AM", action: "Merchant created with dual categories", by: "Aljayvee Versola" },
+    ],
+  },
+  {
+    id: 8,
+    businessName: "Lambayong Public Market Stall 12",
+    categories: ["Pabili"],
+    city: "Lambayong",
+    municipality: "Lambayong",
+    barangay: "Brgy. Poblacion",
+    purok: "Purok 1",
+    street: "Municipal Market Road",
+    landmark: "Near Lambayong Municipal Hall Market Wings",
+    description: "Public market stall offering fresh vegetables, meat, and fish for daily Pabili orders.",
+    operatingHours: { open: "05:00", close: "12:00" },
+    status: "Active",
+    createdAt: "2026-03-01",
+    updatedAt: "2026-03-01",
+    auditLog: [
+      { timestamp: "2026-03-01 06:00 AM", action: "Merchant created", by: "Aljayvee Versola" },
+    ],
+  },
+  {
+    id: 9,
+    businessName: "Santiago Hardware Supply",
+    categories: ["Pabili"],
+    city: "Tacurong City",
+    municipality: "Tacurong",
+    barangay: "Brgy. Upper Katungal",
+    purok: "Purok 3",
+    street: "Mango Street",
+    landmark: "White house on corner Mango St",
+    description: "Hardware, construction materials, and home improvement supplies.",
+    operatingHours: { open: "07:30", close: "17:30" },
+    status: "Inactive",
+    createdAt: "2026-03-05",
+    updatedAt: "2026-04-02",
+    auditLog: [
+      { timestamp: "2026-03-05 09:00 AM", action: "Merchant created", by: "Aljayvee Versola" },
+      { timestamp: "2026-04-02 11:00 AM", action: "Status changed: Active → Inactive (Renovation)", by: "Aljayvee Versola" },
+    ],
+  },
+  {
+    id: 10,
+    businessName: "Meralco / SEWS Authorized Payment Center",
+    categories: ["Bills Payment"],
+    city: "Tacurong City",
+    municipality: "Tacurong",
+    barangay: "Brgy. Calean",
+    purok: "Purok 2",
+    street: "Maharlika Highway",
+    landmark: "Green fence near water refilling station",
+    description: "Official Meralco and Sultan Kudarat Electric cooperative payment center.",
+    operatingHours: { open: "08:00", close: "17:00" },
+    status: "Active",
+    createdAt: "2026-03-10",
+    updatedAt: "2026-03-10",
+    auditLog: [
+      { timestamp: "2026-03-10 08:00 AM", action: "Merchant created", by: "Aljayvee Versola" },
+    ],
+  },
+];
