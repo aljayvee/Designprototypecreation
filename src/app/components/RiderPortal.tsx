@@ -75,10 +75,9 @@ export default function RiderPortal() {
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-2">
               <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-white shadow-sm">
-                <Bike size={18} style={{ color: "#DC2626" }} />
               </div>
               <div>
-                <p style={{ color: "#FFFFFF", fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.08em" }}>SUGO RIDER</p>
+                <p style={{ color: "#FFFFFF", fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.08em" }}>Company Name</p>
                 <p style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.68rem" }}>On Duty</p>
               </div>
             </div>
@@ -114,7 +113,7 @@ export default function RiderPortal() {
               className="w-14 h-14 rounded-full border-2 border-white flex items-center justify-center shadow-md"
               style={{ background: "#DC2626" }}
             >
-              <span className="text-white" style={{ fontSize: "1.1rem", fontWeight: 800 }}>CB</span>
+              <span className="text-white" style={{ fontSize: "1.1rem", fontWeight: 800 }}>AM</span>
             </div>
             <div>
               <p className="text-white" style={{ fontSize: "1rem", fontWeight: 700 }}>Carlos Bautista</p>
@@ -386,9 +385,9 @@ export default function RiderPortal() {
                   className="w-20 h-20 rounded-full border-4 border-white flex items-center justify-center mx-auto mb-3 shadow-md"
                   style={{ background: "#DC2626" }}
                 >
-                  <span className="text-white" style={{ fontSize: "1.5rem", fontWeight: 800 }}>CB</span>
+                  <span className="text-white" style={{ fontSize: "1.5rem", fontWeight: 800 }}>AM</span>
                 </div>
-                <p className="text-white" style={{ fontSize: "1.1rem", fontWeight: 700 }}>Carlos Reyes Bautista</p>
+                <p className="text-white" style={{ fontSize: "1.1rem", fontWeight: 700 }}>Al-Dhen Musali</p>
                 <p style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.8rem" }}>Rider ID: RDR-001</p>
                 <div className="flex items-center justify-center gap-1 mt-1">
                   {[1, 2, 3, 4, 5].map(s => (
@@ -399,9 +398,9 @@ export default function RiderPortal() {
               </div>
 
               {[
-                { label: "Phone Number",        value: "09391234567" },
-                { label: "Vehicle",             value: "Motorcycle — ABC-1234" },
-                { label: "Email",               value: "cr.bautista@sugo.ph" },
+                { label: "Phone Number",           value: "09391234567" },
+                { label: "Vehicle",                value: "Motorcycle — ABC-1234" },
+                { label: "Email",                  value: "ad.musali@company.ph" },
                 { label: "Status",              value: "Active" },
                 { label: "Total Trips (All Time)", value: "248" },
                 { label: "Join Date",           value: "January 15, 2024" },

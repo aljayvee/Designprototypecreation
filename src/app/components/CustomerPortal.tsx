@@ -133,9 +133,8 @@ export default function CustomerPortal() {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-xl bg-white bg-opacity-20 flex items-center justify-center">
-                      <Bike size={16} className="text-white" />
                     </div>
-                    <span className="text-white" style={{ fontSize: "0.9rem", fontWeight: 800, letterSpacing: "0.05em" }}>SUGO</span>
+                    <span className="text-white" style={{ fontSize: "0.9rem", fontWeight: 800, letterSpacing: "0.05em" }}>Company Name</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button onClick={() => setNotifOpen(o => !o)} className="relative p-2 rounded-xl bg-white bg-opacity-20">
@@ -152,7 +151,7 @@ export default function CustomerPortal() {
                   </div>
                 </div>
 
-                <p style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.82rem" }}>Hi, Liza! 👋</p>
+                <p style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.82rem" }}>Hi, Jiane Gamboa! 👋</p>
                 <h2 className="text-white" style={{ fontSize: "1.3rem" }}>What can we get for you today?</h2>
 
                 {/* Search */}

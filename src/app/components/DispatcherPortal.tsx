@@ -735,10 +735,9 @@ export default function DispatcherPortal() {
         <div className="px-5 py-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "#E53935" }}>
-              <Bike size={18} className="text-white" />
             </div>
             <div>
-              <p className="text-white" style={{ fontSize: "1rem", fontWeight: 800, letterSpacing: "0.05em" }}>SUGO</p>
+              <p className="text-white" style={{ fontSize: "1rem", fontWeight: 800, letterSpacing: "0.05em" }}>Company Name</p>
               <p style={{ color: "#93C5FD", fontSize: "0.6rem", letterSpacing: "0.1em" }}>DISPATCHER</p>
             </div>
           </div>
@@ -775,9 +774,9 @@ export default function DispatcherPortal() {
 
         <div className="p-4" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-9 h-9 rounded-full flex items-center justify-center text-white" style={{ background: "#2563EB", fontSize: "0.75rem", fontWeight: 700 }}>AV</div>
+            <div className="w-9 h-9 rounded-full flex items-center justify-center text-white" style={{ background: "#2563EB", fontSize: "0.75rem", fontWeight: 700 }}>MB</div>
             <div>
-              <p className="text-white" style={{ fontSize: "0.82rem", fontWeight: 600 }}>Ana Marie Villanueva</p>
+              <p className="text-white" style={{ fontSize: "0.82rem", fontWeight: 600 }}>Mark Dennis Batcharo</p>
               <p style={{ color: "#93C5FD", fontSize: "0.72rem" }}>Head Dispatcher</p>
             </div>
           </div>

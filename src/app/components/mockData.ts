@@ -4,10 +4,10 @@ export const DUMMY_ACCOUNTS = [
     username: "owner",
     password: "owner123",
     role: "owner" as const,
-    name: "John Dominic Arellano",
-    email: "jd.arellano@sugo.ph",
+    name: "Aljayvee Versola",
+    email: "aj.versola@company.ph",
     phone: "09171234567",
-    avatar: "JA",
+    avatar: "AV",
     position: "Business Owner",
   },
   {
@@ -15,10 +15,10 @@ export const DUMMY_ACCOUNTS = [
     username: "dispatcher",
     password: "dispatch123",
     role: "dispatcher" as const,
-    name: "Ana Marie Villanueva",
-    email: "am.villanueva@sugo.ph",
+    name: "Mark Dennis Batcharo",
+    email: "md.batcharo@company.ph",
     phone: "09281234567",
-    avatar: "AV",
+    avatar: "MB",
     position: "Head Dispatcher",
   },
   {
@@ -26,10 +26,10 @@ export const DUMMY_ACCOUNTS = [
     username: "rider01",
     password: "rider123",
     role: "rider" as const,
-    name: "Carlos Reyes Bautista",
-    email: "cr.bautista@sugo.ph",
+    name: "Al-Dhen Musali",
+    email: "ad.musali@company.ph",
     phone: "09391234567",
-    avatar: "CB",
+    avatar: "AM",
     position: "Delivery Rider",
     vehicleType: "Motorcycle",
     plateNumber: "ABC-1234",
@@ -40,10 +40,10 @@ export const DUMMY_ACCOUNTS = [
     username: "customer",
     password: "customer123",
     role: "customer" as const,
-    name: "Liza Marie Reyes",
-    email: "liza.reyes@gmail.com",
+    name: "Jiane Gamboa",
+    email: "jiane.gamboa@gmail.com",
     phone: "09501234567",
-    avatar: "LR",
+    avatar: "JG",
     address: "Blk 12 Lot 5, Maharlika Highway, Barangay Calean, Tacurong City",
     landmark: "Near SM City Sultan Kudarat",
   },
@@ -109,7 +109,7 @@ export interface Customer {
 }
 
 export const riders: Rider[] = [
-  { id: 1, name: "Carlos Bautista", phone: "09391234567", status: "Available", completedToday: 5, plateNumber: "ABC-1234", avatar: "CB", avgTime: "28 min", rating: 4.8 },
+  { id: 1, name: "Al-Dhen Musali", phone: "09391234567", status: "Available", completedToday: 5, plateNumber: "ABC-1234", avatar: "AM", avgTime: "28 min", rating: 4.8 },
   { id: 2, name: "Mario Santos", phone: "09392345678", status: "On Errand", completedToday: 8, plateNumber: "DEF-5678", avatar: "MS", currentErrand: "SGO-003", avgTime: "24 min", rating: 4.9 },
   { id: 3, name: "Jose Dela Cruz", phone: "09393456789", status: "Available", completedToday: 3, plateNumber: "GHI-9012", avatar: "JD", avgTime: "32 min", rating: 4.5 },
   { id: 4, name: "Pedro Reyes", phone: "09394567890", status: "Offline", completedToday: 0, plateNumber: "JKL-3456", avatar: "PR", avgTime: "30 min", rating: 4.3 },
@@ -124,8 +124,8 @@ export const riders: Rider[] = [
 ];
 
 export const errands: Errand[] = [
-  { id: "SGO-001", type: "Pabili", customer: "Liza Reyes", customerPhone: "09501234567", address: "Maharlika Highway, Brgy Calean", landmark: "Near SM Sultan Kudarat", paymentMode: "Cash on Delivery", status: "Pending", amount: 850, serviceFee: 50, commission: 50, createdAt: "10:45 AM", updatedAt: "10:45 AM", distance: "2.5 km", storeCount: 1 },
-  { id: "SGO-002", type: "Padala", customer: "Mark Torres", customerPhone: "09502345678", address: "Brgy Buenaflor, Tacurong", landmark: "Blue gate near sari-sari store", paymentMode: "GCash", status: "Assigned", riderId: 1, riderName: "Carlos Bautista", amount: 120, serviceFee: 35, createdAt: "10:30 AM", updatedAt: "10:45 AM", distance: "1.8 km" },
+  { id: "SGO-001", type: "Pabili", customer: "Jiane Gamboa", customerPhone: "09501234567", address: "Maharlika Highway, Brgy Calean", landmark: "Near SM Sultan Kudarat", paymentMode: "Cash on Delivery", status: "Pending", amount: 850, serviceFee: 50, commission: 50, createdAt: "10:45 AM", updatedAt: "10:45 AM", distance: "2.5 km", storeCount: 1 },
+  { id: "SGO-002", type: "Padala", customer: "Mark Torres", customerPhone: "09502345678", address: "Brgy Buenaflor, Tacurong", landmark: "Blue gate near sari-sari store", paymentMode: "GCash", status: "Assigned", riderId: 1, riderName: "Al-Dhen Musali", amount: 120, serviceFee: 35, createdAt: "10:30 AM", updatedAt: "10:45 AM", distance: "1.8 km" },
   { id: "SGO-003", type: "Pabili", customer: "Sarah Dela Cruz", customerPhone: "09503456789", address: "Brgy Upper Katungal", landmark: "White house corner Mango St", paymentMode: "Cash on Delivery", status: "En Route", riderId: 2, riderName: "Mario Santos", amount: 1350, serviceFee: 60, commission: 135, createdAt: "09:45 AM", updatedAt: "11:00 AM", distance: "4.2 km", storeCount: 1 },
   { id: "SGO-004", type: "Bills Payment", customer: "Ben Navarro", customerPhone: "09504567890", address: "Brgy Edsa, Tacurong", landmark: "Near BDO ATM", paymentMode: "Cash on Delivery", status: "Pending", amount: 2500, serviceFee: 45, createdAt: "11:05 AM", updatedAt: "11:05 AM", distance: "3.1 km" },
   { id: "SGO-005", type: "Pabili", customer: "Rose Fernandez", customerPhone: "09505678901", address: "Brgy Tina, Isulan", landmark: "Corner shop near church", paymentMode: "GCash", status: "At Store", riderId: 5, riderName: "Antonio Garcia", amount: 750, serviceFee: 70, commission: 50, createdAt: "10:00 AM", updatedAt: "10:50 AM", distance: "5.5 km", storeCount: 1 },
@@ -137,7 +137,7 @@ export const errands: Errand[] = [
 ];
 
 export const customers: Customer[] = [
-  { id: 1, name: "Liza Reyes", phone: "09501234567", email: "liza.reyes@gmail.com", address: "Maharlika Highway, Brgy Calean, Tacurong City", landmark: "Near SM Sultan Kudarat", totalErrands: 24, lastErrand: "Today, 10:45 AM", status: "VIP" },
+  { id: 1, name: "Jiane Gamboa", phone: "09501234567", email: "jiane.gamboa@gmail.com", address: "Maharlika Highway, Brgy Calean, Tacurong City", landmark: "Near SM Sultan Kudarat", totalErrands: 24, lastErrand: "Today, 10:45 AM", status: "VIP" },
   { id: 2, name: "Mark Torres", phone: "09502345678", address: "Brgy Buenaflor, Tacurong City", landmark: "Blue gate near sari-sari store", totalErrands: 12, lastErrand: "Today, 10:30 AM", status: "Regular" },
   { id: 3, name: "Sarah Dela Cruz", phone: "09503456789", address: "Brgy Upper Katungal, Tacurong City", landmark: "White house corner Mango St", totalErrands: 8, lastErrand: "Today, 09:45 AM", status: "Regular" },
   { id: 4, name: "Ben Navarro", phone: "09504567890", address: "Brgy Edsa, Tacurong City", landmark: "Near BDO ATM", totalErrands: 3, lastErrand: "Today, 11:05 AM", status: "New" },
@@ -200,7 +200,7 @@ export const riderCurrentErrand: Errand = {
   paymentMode: "GCash",
   status: "Assigned",
   riderId: 1,
-  riderName: "Carlos Bautista",
+  riderName: "Al-Dhen Musali",
   amount: 120,
   serviceFee: 35,
   createdAt: "10:30 AM",

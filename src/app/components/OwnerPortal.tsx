@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import {
   LayoutDashboard, Users, Bike, ClipboardList, BarChart2, Settings,
   LogOut, Bell, Search, TrendingUp, Package, DollarSign,
-  CheckCircle, Clock, AlertTriangle, XCircle, Menu, X, Plus, Edit2,
+  CheckCircle, Clock, AlertTriangle, AlertCircle, XCircle, Menu, X, Plus, Edit2,
   Trash2, Download, Printer, Eye, RefreshCw, Star, Save,
   Phone, Shield, ToggleLeft, ToggleRight, Building2, Calendar
 } from "lucide-react";
@@ -285,9 +285,9 @@ function ErrandsSection() {
 
 function UsersSection() {
   const [userList, setUserList] = useState([
-    { id: 1, name: "John Dominic Arellano",  role: "Owner",      username: "owner",      email: "jd.arellano@sugo.ph",   phone: "09171234567", status: "Active" },
-    { id: 2, name: "Ana Marie Villanueva",    role: "Dispatcher", username: "dispatcher", email: "am.villanueva@sugo.ph", phone: "09281234567", status: "Active" },
-    { id: 3, name: "Carlos Reyes Bautista",  role: "Rider",      username: "rider01",    email: "cr.bautista@sugo.ph",   phone: "09391234567", status: "Active" },
+    { id: 1, name: "Aljayvee Versola",      role: "Owner",      username: "owner",      email: "aj.versola@company.ph",   phone: "09171234567", status: "Active" },
+    { id: 2, name: "Mark Dennis Batcharo",  role: "Dispatcher", username: "dispatcher", email: "md.batcharo@company.ph", phone: "09281234567", status: "Active" },
+    { id: 3, name: "Al-Dhen Musali",        role: "Rider",      username: "rider01",    email: "ad.musali@company.ph",   phone: "09391234567", status: "Active" },
   ]);
   const [showModal,     setShowModal]     = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -296,8 +296,10 @@ function UsersSection() {
   const [editForm, setEditForm] = useState({ name: "", role: "Rider", username: "", email: "", phone: "", status: "Active" });
   const [formError,  setFormError]  = useState("");
   const [editError,  setEditError]  = useState("");
-  const [saved,      setSaved]      = useState(false);
-  const [editSaved,  setEditSaved]  = useState(false);
+  const [saved,           setSaved]           = useState(false);
+  const [editSaved,       setEditSaved]       = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmAction,    setConfirmAction]    = useState<"add" | "edit" | null>(null);
 
   const roleColors: Record<string, { bg: string; text: string }> = {
     Owner:      { bg: "#FEF3C7", text: "#92400E" },
@@ -326,6 +328,13 @@ function UsersSection() {
       setFormError("Username already exists. Please choose a different one.");
       return;
     }
+    setConfirmAction("add");
+    setShowConfirmModal(true);
+  };
+
+  const commitAdd = () => {
+    setShowConfirmModal(false);
+    setConfirmAction(null);
     setUserList(prev => [...prev, { id: prev.length + 1, name: form.name.trim(), role: form.role, username: form.username.trim(), email: form.email.trim(), phone: form.phone.trim(), status: form.status }]);
     setSaved(true);
     toast.success("User added successfully!");
@@ -338,6 +347,13 @@ function UsersSection() {
       setEditError("Name and Phone are required.");
       return;
     }
+    setConfirmAction("edit");
+    setShowConfirmModal(true);
+  };
+
+  const commitEdit = () => {
+    setShowConfirmModal(false);
+    setConfirmAction(null);
     setUserList(prev => prev.map(u => u.id === editingUser?.id ? { ...u, ...editForm } : u));
     setEditSaved(true);
     toast.success("User updated successfully!");
@@ -572,6 +588,43 @@ function UsersSection() {
               <button onClick={handleSaveEdit} className="flex-1 py-3 rounded-xl text-white flex items-center justify-center gap-2 transition-all"
                 style={{ background: editSaved ? "#10B981" : "#2563EB", fontSize: "0.85rem", fontWeight: 600 }}>
                 {editSaved ? <><CheckCircle size={16} /> Saved!</> : <><Save size={16} /> Save Changes</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Confirmation Modal ── */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-[60]" style={{ background: "rgba(0,0,0,0.55)" }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+            <div className="flex items-center gap-3 px-6 py-5" style={{ background: NAVY }}>
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: "rgba(255,255,255,0.15)" }}>
+                <AlertCircle size={18} className="text-white" />
+              </div>
+              <p className="text-white" style={{ fontSize: "0.95rem", fontWeight: 700 }}>Confirm Action</p>
+            </div>
+            <div className="px-6 py-6">
+              <p style={{ color: "#1F2937", fontSize: "0.92rem", fontWeight: 500, textAlign: "center", lineHeight: 1.6 }}>
+                {confirmAction === "add"
+                  ? "Are you sure you want to add this user?"
+                  : "Are you sure you want to update this user?"}
+              </p>
+            </div>
+            <div className="flex gap-3 px-6 pb-6">
+              <button
+                onClick={() => { setShowConfirmModal(false); setConfirmAction(null); }}
+                className="flex-1 py-3 rounded-xl"
+                style={{ border: "1.5px solid #E5E7EB", color: "#374151", fontSize: "0.9rem", fontWeight: 600 }}
+              >
+                No
+              </button>
+              <button
+                onClick={() => { confirmAction === "add" ? commitAdd() : commitEdit(); }}
+                className="flex-1 py-3 rounded-xl text-white"
+                style={{ background: NAVY, fontSize: "0.9rem", fontWeight: 600 }}
+              >
+                Yes
               </button>
             </div>
           </div>
@@ -834,8 +887,9 @@ function RatesSection() {
 function ReportsSection() {
   const [tab, setTab] = useState("sales");
   const [reportFreq, setReportFreq] = useState("Daily");
-  const [startDate, setStartDate] = useState("2026-03-23");
-  const [endDate, setEndDate] = useState("2026-03-23");
+  const [startDate, setStartDate] = useState("2025-04-07");
+  const [endDate, setEndDate] = useState("2026-04-07");
+  const [showPrintModal, setShowPrintModal] = useState(false);
 
   const tabs = [
     { id: "sales",       label: "Sales Report" },
@@ -844,7 +898,34 @@ function ReportsSection() {
     { id: "settlement",  label: "Settlement" },
   ];
 
-  const handlePrint = () => window.print();
+  const factor = reportFreq === "Weekly" ? 7 : reportFreq === "Monthly" ? 30 : reportFreq === "Yearly" ? 365 : 1;
+
+  const syncFreqWithDates = (newStart: string, newEnd: string) => {
+    if (!newStart || !newEnd) return;
+    const diffTime = Math.abs(new Date(newEnd).getTime() - new Date(newStart).getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) setReportFreq("Daily");
+    else if (diffDays <= 7) setReportFreq("Weekly");
+    else if (diffDays <= 31) setReportFreq("Monthly");
+    else setReportFreq("Yearly");
+  };
+
+  const handleFreqSelect = (f: string) => {
+    setReportFreq(f);
+    if (!endDate) return;
+    const end = new Date(endDate);
+    const start = new Date(endDate);
+    
+    if (f === "Weekly") start.setDate(end.getDate() - 6);
+    else if (f === "Monthly") start.setMonth(end.getMonth() - 1);
+    else if (f === "Yearly") start.setFullYear(end.getFullYear() - 1);
+    else if (f === "Daily") start.setDate(end.getDate());
+    
+    setStartDate(start.toISOString().split("T")[0]);
+  };
+
+  const handlePrint = () => setShowPrintModal(true);
   const handleExportPDF = () => {
     toast.success("Report exported!", { description: `${tabs.find(t => t.id === tab)?.label} (${reportFreq}) — ${startDate} to ${endDate} saved to Downloads.` });
   };
@@ -875,7 +956,7 @@ function ReportsSection() {
           <label style={{ color: "#6B7280", fontSize: "0.75rem", fontWeight: 600, letterSpacing: "0.05em" }}>REPORT FREQUENCY</label>
           <div className="flex bg-[#F3F4F6] p-1 rounded-xl">
             {["Daily", "Weekly", "Monthly", "Yearly"].map(f => (
-              <button key={f} onClick={() => setReportFreq(f)} className="px-4 py-1.5 rounded-lg transition-all"
+              <button key={f} onClick={() => handleFreqSelect(f)} className="px-4 py-1.5 rounded-lg transition-all"
                 style={{
                   background: reportFreq === f ? "#fff" : "transparent",
                   boxShadow: reportFreq === f ? "0 2px 4px rgba(0,0,0,0.05)" : "none",
@@ -895,14 +976,14 @@ function ReportsSection() {
             <div className="flex items-center gap-2">
               <div className="relative">
                 <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#9CA3AF" }} />
-                <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+                <input type="date" value={startDate} onChange={e => { setStartDate(e.target.value); syncFreqWithDates(e.target.value, endDate); }}
                   className="pl-9 pr-3 py-2 rounded-xl outline-none"
                   style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", fontSize: "0.82rem", color: "#1F2937" }} />
               </div>
               <span style={{ color: "#9CA3AF" }}>—</span>
               <div className="relative">
                 <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#9CA3AF" }} />
-                <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+                <input type="date" value={endDate} onChange={e => { setEndDate(e.target.value); syncFreqWithDates(startDate, e.target.value); }}
                   className="pl-9 pr-3 py-2 rounded-xl outline-none"
                   style={{ background: "#F9FAFB", border: "1px solid #E5E7EB", fontSize: "0.82rem", color: "#1F2937" }} />
               </div>
@@ -914,10 +995,41 @@ function ReportsSection() {
       {tab === "sales" && (
         <div className="space-y-4">
           <div className="grid grid-cols-3 gap-4">
-            <MetricCard title="Total Transactions" value="10"    sub={`${reportFreq} summary`} icon={ClipboardList} color="#3B82F6" />
-            <MetricCard title="Total Revenue"       value="₱875" sub={`Total for ${reportFreq.toLowerCase()}`} icon={TrendingUp}    color="#10B981" />
+            <MetricCard title="Total Transactions" value={String(10 * factor)}    sub={`${reportFreq} summary`} icon={ClipboardList} color="#3B82F6" />
+            <MetricCard title="Total Revenue"       value={`₱${(875 * factor).toLocaleString()}`} sub={`Total for ${reportFreq.toLowerCase()}`} icon={TrendingUp}    color="#10B981" />
             <MetricCard title="Avg. Service Fee"    value="₱47"  sub={`Avg. during ${reportFreq.toLowerCase()}`} icon={DollarSign}    color="#F59E0B" />
           </div>
+
+          <div className="bg-white rounded-2xl shadow-sm p-5" style={{ border: "1px solid #E5E7EB" }}>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 style={{ color: "#1F2937" }}>{reportFreq} Sales Trend</h3>
+                <p style={{ color: "#6B7280", fontSize: "0.78rem" }}>Revenue over time from {startDate} to {endDate}</p>
+              </div>
+              <div className="flex gap-2">
+                <span className="px-2 py-0.5 rounded text-xs font-semibold" style={{ background: "#F3F4F6", color: "#6B7280" }}>Revenue: ₱875.00</span>
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={240}>
+              <AreaChart data={reportFreq === "Daily" ? revenueData : weeklyData.map(d => ({ ...d, revenue: d.revenue * (factor / 7) }))}>
+                <defs>
+                  <linearGradient id="reportRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor={NAVY} stopOpacity={0.12} />
+                    <stop offset="95%" stopColor={NAVY} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
+                <XAxis dataKey={reportFreq === "Daily" ? "hour" : "day"} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#9CA3AF" }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#9CA3AF" }} />
+                <Tooltip
+                  contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)" }}
+                  formatter={(v: any) => [`₱${v}`, "Revenue"]}
+                />
+                <Area type="monotone" dataKey={reportFreq === "Daily" ? "revenue" : "revenue"} stroke={NAVY} strokeWidth={3} fill="url(#reportRevenue)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+
           <div className="bg-white rounded-2xl shadow-sm p-5" style={{ border: "1px solid #E5E7EB" }}>
             <h3 className="mb-4" style={{ color: "#1F2937" }}>{reportFreq} Sales Report — {startDate} to {endDate}</h3>
             <table className="w-full">
@@ -949,10 +1061,32 @@ function ReportsSection() {
       )}
 
       {tab === "performance" && (
-        <div className="bg-white rounded-2xl shadow-sm" style={{ border: "1px solid #E5E7EB" }}>
-          <div className="p-5" style={{ borderBottom: "1px solid #F3F4F6" }}>
-            <h3 style={{ color: "#1F2937" }}>Rider Performance — {reportFreq} ({startDate} to {endDate})</h3>
+        <div className="space-y-4">
+          <div className="bg-white rounded-2xl shadow-sm p-5" style={{ border: "1px solid #E5E7EB" }}>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 style={{ color: "#1F2937" }}>Rider Completion Overview</h3>
+                <p style={{ color: "#6B7280", fontSize: "0.78rem" }}>Completed errands per rider for the selected period</p>
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={riders.filter(r => r.completedToday > 0).map(r => ({ name: r.name, completed: r.completedToday * factor }))}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false} />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: "#9CA3AF" }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#9CA3AF" }} />
+                <Tooltip
+                  cursor={{ fill: "#F9FAFB" }}
+                  contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)" }}
+                />
+                <Bar dataKey="completed" fill={NAVY} radius={[4, 4, 0, 0]} barSize={40} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
+
+          <div className="bg-white rounded-2xl shadow-sm" style={{ border: "1px solid #E5E7EB" }}>
+            <div className="p-5" style={{ borderBottom: "1px solid #F3F4F6" }}>
+              <h3 style={{ color: "#1F2937" }}>Rider Performance — {reportFreq} ({startDate} to {endDate})</h3>
+            </div>
           <table className="w-full">
             <thead>
               <tr style={{ background: "#F9FAFB" }}>
@@ -971,10 +1105,10 @@ function ReportsSection() {
                       <span style={{ color: "#1F2937", fontSize: "0.82rem" }}>{r.name}</span>
                     </div>
                   </td>
-                  <td className="px-4 py-3" style={{ color: "#1F2937", fontSize: "0.82rem", fontWeight: 700 }}>{r.completedToday}</td>
-                  <td className="px-4 py-3" style={{ color: "#10B981", fontSize: "0.82rem" }}>{Math.floor(85 + (r.rating - 4) * 15)}%</td>
+                  <td className="px-4 py-3" style={{ color: "#1F2937", fontSize: "0.82rem", fontWeight: 700 }}>{r.completedToday * factor}</td>
+                  <td className="px-4 py-3" style={{ color: "#10B981", fontSize: "0.82rem" }}>{Math.floor(85 + (r.rating! - 4) * 15)}%</td>
                   <td className="px-4 py-3" style={{ color: "#374151", fontSize: "0.82rem" }}>{r.avgTime}</td>
-                  <td className="px-4 py-3" style={{ color: "#3B82F6", fontSize: "0.82rem", fontWeight: 600 }}>₱{(r.completedToday * 35 + 50).toLocaleString()}</td>
+                  <td className="px-4 py-3" style={{ color: "#3B82F6", fontSize: "0.82rem", fontWeight: 600 }}>₱{((r.completedToday * 35 + 50) * factor).toLocaleString()}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1">
                       <Star size={12} fill="#F59E0B" style={{ color: "#F59E0B" }} />
@@ -986,6 +1120,7 @@ function ReportsSection() {
             </tbody>
           </table>
         </div>
+      </div>
       )}
 
       {tab === "commission" && (
@@ -1011,9 +1146,9 @@ function ReportsSection() {
                       {e.amount > 1000 ? "10% Variable" : "₱50 Flat"}
                     </span>
                   </td>
-                  <td className="px-3 py-2.5" style={{ color: "#10B981", fontSize: "0.78rem", fontWeight: 700 }}>₱{e.commission}</td>
-                  <td className="px-3 py-2.5" style={{ color: "#F59E0B", fontSize: "0.78rem" }}>{e.surcharge ? `₱${e.surcharge}` : "—"}</td>
-                  <td className="px-3 py-2.5" style={{ color: NAVY, fontSize: "0.78rem", fontWeight: 700 }}>₱{(e.commission || 0) + (e.surcharge || 0)}</td>
+                  <td className="px-3 py-2.5" style={{ color: "#10B981", fontSize: "0.78rem", fontWeight: 700 }}>₱{(e.commission || 0) * factor}</td>
+                  <td className="px-3 py-2.5" style={{ color: "#F59E0B", fontSize: "0.78rem" }}>{e.surcharge ? `₱${e.surcharge * factor}` : "—"}</td>
+                  <td className="px-3 py-2.5" style={{ color: NAVY, fontSize: "0.78rem", fontWeight: 700 }}>₱{((e.commission || 0) + (e.surcharge || 0)) * factor}</td>
                 </tr>
               ))}
             </tbody>
@@ -1025,14 +1160,14 @@ function ReportsSection() {
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
           <div className="bg-white rounded-2xl shadow-sm p-6" style={{ border: "1px solid #E5E7EB" }}>
             <h3 className="mb-4" style={{ color: "#1F2937" }}>{reportFreq} Settlement — {startDate} to {endDate}</h3>
-            {[
-              { label: "Total Transactions",           value: "10 errands" },
-              { label: "Total Capital Deployed",        value: "₱10,370.00" },
-              { label: "Total Service Fees Collected",  value: "₱475.00" },
-              { label: "Total Grocery Commissions",     value: "₱505.00" },
-              { label: "Multi-Store Surcharges",        value: "₱25.00" },
-              { label: "Total Sugo Share",              value: "₱530.00", highlight: true },
-              { label: "Total Rider Share (Base Fees)", value: "₱475.00", highlight: true },
+             {[
+              { label: "Total Transactions",           value: `${10 * factor} errands` },
+              { label: "Total Capital Deployed",        value: `₱${(10370 * factor).toLocaleString(undefined, {minimumFractionDigits: 2})}` },
+              { label: "Total Service Fees Collected",  value: `₱${(475 * factor).toLocaleString(undefined, {minimumFractionDigits: 2})}` },
+              { label: "Total Grocery Commissions",     value: `₱${(505 * factor).toLocaleString(undefined, {minimumFractionDigits: 2})}` },
+              { label: "Multi-Store Surcharges",        value: `₱${(25 * factor).toLocaleString(undefined, {minimumFractionDigits: 2})}` },
+              { label: "Total Sugo Share",              value: `₱${(530 * factor).toLocaleString(undefined, {minimumFractionDigits: 2})}`, highlight: true },
+              { label: "Total Rider Share (Base Fees)", value: `₱${(475 * factor).toLocaleString(undefined, {minimumFractionDigits: 2})}`, highlight: true },
             ].map((item, i) => (
               <div key={i} className="flex justify-between py-3" style={{ borderBottom: "1px solid #F3F4F6" }}>
                 <span style={{ color: "#6B7280", fontSize: "0.85rem" }}>{item.label}</span>
@@ -1049,11 +1184,175 @@ function ReportsSection() {
                   <span style={{ color: "#374151", fontSize: "0.82rem" }}>{r.name}</span>
                 </div>
                 <div className="text-right">
-                  <p style={{ color: NAVY, fontSize: "0.82rem", fontWeight: 700 }}>₱{(r.completedToday * 40).toLocaleString()}</p>
-                  <p style={{ color: "#9CA3AF", fontSize: "0.72rem" }}>{r.completedToday} trips</p>
+                  <p style={{ color: NAVY, fontSize: "0.82rem", fontWeight: 700 }}>₱{((r.completedToday * 40) * factor).toLocaleString()}</p>
+                  <p style={{ color: "#9CA3AF", fontSize: "0.72rem" }}>{r.completedToday * factor} trips</p>
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+      
+      {showPrintModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50" style={{ backdropFilter: "blur(4px)" }}>
+          <div className="bg-white rounded-xl shadow-2xl flex flex-col w-full max-w-2xl" style={{ border: "1px solid #E5E7EB", maxHeight: "90vh" }}>
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-5" style={{ borderBottom: "1px solid #F3F4F6", background: "#F9FAFB", borderTopLeftRadius: "0.75rem", borderTopRightRadius: "0.75rem" }}>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "#E53935" }}></div>
+                <div>
+                  <h3 style={{ color: "#1F2937", fontSize: "1rem", fontWeight: 800 }}>Company Name</h3>
+                  <p style={{ color: "#6B7280", fontSize: "0.75rem" }}>Official Digital Report</p>
+                </div>
+              </div>
+              <button onClick={() => setShowPrintModal(false)} className="p-2 rounded-lg hover:bg-gray-200 transition-colors">
+                <X size={18} style={{ color: "#6B7280" }} />
+              </button>
+            </div>
+            
+            {/* Paper Document Content */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-gray-100 flex justify-center">
+              <div className="bg-white p-8 sm:p-10 w-full shadow-md" style={{ aspectRatio: "1 / 1.414", maxWidth: "800px", minHeight: "600px", border: "1px solid #D1D5DB" }}>
+                <h1 className="text-center mb-6" style={{ color: NAVY, fontSize: "1.5rem", fontWeight: 800 }}>
+                  {tabs.find(t => t.id === tab)?.label?.toUpperCase()}
+                </h1>
+                
+                <div className="flex justify-between mb-8 pb-4" style={{ borderBottom: "2px solid #E5E7EB" }}>
+                  <div>
+                    <p style={{ color: "#6B7280", fontSize: "0.85rem", fontWeight: 600 }}>FREQUENCY</p>
+                    <p style={{ color: "#1F2937", fontSize: "1rem", fontWeight: 700 }}>{reportFreq}</p>
+                  </div>
+                  <div className="text-right">
+                    <p style={{ color: "#6B7280", fontSize: "0.85rem", fontWeight: 600 }}>PERIOD</p>
+                    <p style={{ color: "#1F2937", fontSize: "1rem", fontWeight: 700 }}>{startDate} to {endDate}</p>
+                  </div>
+                </div>
+
+                <div className="mb-8">
+                  <p className="mb-4" style={{ color: "#374151", fontSize: "0.95rem", lineHeight: "1.6" }}>
+                    This digital report certifies the data for the selected period. 
+                    The metrics below summarize the performance for the indicated reporting frame.
+                  </p>
+                  
+                  <div className="bg-white p-4 rounded-lg" style={{ border: "1px solid #D1D5DB" }}>
+                    <p className="mb-4" style={{ color: NAVY, fontSize: "1.1rem", fontWeight: 700, textAlign: "center" }}>
+                      System Verified Summary Data
+                    </p>
+
+                    {tab === "sales" && (
+                      <table className="w-full text-left" style={{ fontSize: "0.85rem" }}>
+                        <thead>
+                          <tr style={{ background: "#F3F4F6", color: "#374151" }}>
+                            <th className="p-2">Errand ID</th>
+                            <th className="p-2">Type</th>
+                            <th className="p-2">Customer</th>
+                            <th className="p-2 text-right">Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {errands.map((e) => (
+                            <tr key={e.id} style={{ borderBottom: "1px solid #E5E7EB" }}>
+                              <td className="p-2" style={{ color: "#1F2937", fontWeight: 500 }}>{e.id}</td>
+                              <td className="p-2 text-gray-600">{e.type}</td>
+                              <td className="p-2 text-gray-600">{e.customer}</td>
+                              <td className="p-2 text-right" style={{ color: "#10B981", fontWeight: 600 }}>₱{e.amount.toLocaleString()}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+
+                    {tab === "performance" && (
+                      <table className="w-full text-left" style={{ fontSize: "0.85rem" }}>
+                        <thead>
+                          <tr style={{ background: "#F3F4F6", color: "#374151" }}>
+                            <th className="p-2">Rider</th>
+                            <th className="p-2 text-center">Completed</th>
+                            <th className="p-2 text-right">Rating</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {riders.filter(r => r.completedToday > 0).sort((a, b) => b.completedToday - a.completedToday).map(r => (
+                            <tr key={r.id} style={{ borderBottom: "1px solid #E5E7EB" }}>
+                              <td className="p-2" style={{ color: "#1F2937", fontWeight: 500 }}>{r.name}</td>
+                              <td className="p-2 text-center text-gray-600">{r.completedToday * factor} trips</td>
+                              <td className="p-2 text-right text-yellow-600">{r.rating} ★</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+
+                    {tab === "commission" && (
+                      <table className="w-full text-left" style={{ fontSize: "0.85rem" }}>
+                        <thead>
+                          <tr style={{ background: "#F3F4F6", color: "#374151" }}>
+                            <th className="p-2">Errand ID</th>
+                            <th className="p-2">Rider</th>
+                            <th className="p-2 text-right">Commission</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {errands.filter(e => e.type === "Pabili" && e.commission).map((e) => (
+                            <tr key={e.id} style={{ borderBottom: "1px solid #E5E7EB" }}>
+                              <td className="p-2" style={{ color: "#1F2937", fontWeight: 500 }}>{e.id}</td>
+                              <td className="p-2 text-gray-600">{e.riderName || "—"}</td>
+                              <td className="p-2 text-right" style={{ color: "#10B981", fontWeight: 600 }}>₱{(e.commission || 0) * factor}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+
+                    {tab === "settlement" && (
+                      <div className="text-left w-full mx-auto" style={{ fontSize: "0.85rem", maxWidth: "400px" }}>
+                        {[
+                          { label: "Total Transactions",           value: `${10 * factor} errands` },
+                          { label: "Total Capital Deployed",        value: `₱${(10370 * factor).toLocaleString(undefined, {minimumFractionDigits: 2})}` },
+                          { label: "Total Service Fees Collected",  value: `₱${(475 * factor).toLocaleString(undefined, {minimumFractionDigits: 2})}` },
+                          { label: "Total Grocery Commissions",     value: `₱${(505 * factor).toLocaleString(undefined, {minimumFractionDigits: 2})}` },
+                          { label: "Multi-Store Surcharges",        value: `₱${(25 * factor).toLocaleString(undefined, {minimumFractionDigits: 2})}` },
+                          { label: "Total Sugo Share",              value: `₱${(530 * factor).toLocaleString(undefined, {minimumFractionDigits: 2})}`, highlight: true },
+                          { label: "Total Rider Share (Base Fees)", value: `₱${(475 * factor).toLocaleString(undefined, {minimumFractionDigits: 2})}`, highlight: true },
+                        ].map((item, i) => (
+                          <div key={i} className="flex justify-between py-2" style={{ borderBottom: i === 6 ? "none" : "1px solid #E5E7EB" }}>
+                            <span style={{ color: "#4B5563" }}>{item.label}</span>
+                            <span style={{ fontWeight: item.highlight ? 700 : 500, color: item.highlight ? NAVY : "#1F2937" }}>{item.value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-auto pt-8" style={{ borderTop: "1px solid #E5E7EB", marginTop: "40px" }}>
+                  <p style={{ color: "#9CA3AF", fontSize: "0.75rem", textAlign: "center" }}>
+                    CONFIDENTIAL - COMPANY NAME INTERNAL USE ONLY
+                  </p>
+                  <p style={{ color: "#9CA3AF", fontSize: "0.75rem", textAlign: "center", marginTop: "4px" }}>
+                    Generated on: {new Date().toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 flex justify-end gap-3" style={{ borderTop: "1px solid #E5E7EB", background: "#fff", borderBottomLeftRadius: "0.75rem", borderBottomRightRadius: "0.75rem" }}>
+              <button 
+                onClick={() => setShowPrintModal(false)} 
+                className="px-4 py-2 rounded-lg" 
+                style={{ color: "#374151", background: "#F3F4F6", fontSize: "0.85rem", fontWeight: 600 }}
+              >
+                Close
+              </button>
+              <button 
+                onClick={() => window.print()} 
+                className="px-4 py-2 rounded-lg text-white flex items-center gap-2" 
+                style={{ background: NAVY, fontSize: "0.85rem", fontWeight: 600 }}
+              >
+                <Printer size={16} /> Print Document
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1244,12 +1543,10 @@ export default function OwnerPortal() {
       >
         {/* Logo */}
         <div className="flex items-center gap-3 px-5 py-5" style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-          <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "#E53935" }}>
-            <Bike size={18} className="text-white" />
-          </div>
+          <div className="w-9 h-9 rounded-xl flex-shrink-0" style={{ background: "#E53935" }} />
           {sidebarOpen && (
             <div>
-              <p className="text-white" style={{ fontSize: "1rem", fontWeight: 800, letterSpacing: "0.05em" }}>SUGO</p>
+              <p className="text-white" style={{ fontSize: "1rem", fontWeight: 800, letterSpacing: "0.05em" }}>Company Name</p>
               <p style={{ color: "#93C5FD", fontSize: "0.6rem", letterSpacing: "0.1em" }}>OWNER PORTAL</p>
             </div>
           )}
@@ -1282,9 +1579,9 @@ export default function OwnerPortal() {
         {sidebarOpen && (
           <div className="p-4" style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 rounded-full flex items-center justify-center text-white" style={{ background: "#E53935", fontSize: "0.75rem", fontWeight: 700 }}>JA</div>
+              <div className="w-9 h-9 rounded-full flex items-center justify-center text-white" style={{ background: "#E53935", fontSize: "0.75rem", fontWeight: 700 }}>AV</div>
               <div>
-                <p className="text-white" style={{ fontSize: "0.82rem", fontWeight: 600 }}>John Dominic Arellano</p>
+                <p className="text-white" style={{ fontSize: "0.82rem", fontWeight: 600 }}>Aljayvee Versola</p>
                 <p style={{ color: "#93C5FD", fontSize: "0.72rem" }}>Business Owner</p>
               </div>
             </div>
