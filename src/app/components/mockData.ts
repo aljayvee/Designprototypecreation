@@ -292,7 +292,9 @@ export const serviceTypeData = [
 export const rateConfig = {
   baseFee: 70,
   perKmFee: 5,
+  // ₱30 per additional store beyond the first, capped at 2 additional stores (3 total)
   multiStoreSurcharge: 30,
+  multiStoreLimit: 2,          // maximum additional stores allowed
   commissionThreshold: 3000,
   commissionFlat: 50,
   commissionPercent: 0.1,
@@ -324,8 +326,9 @@ export const calculateErrandFees = (
 
   let surcharge = 0;
   if (storeCount > 1) {
-    // ₱30 per additional store, max 2 additional (total 3 stores)
-    surcharge = Math.min(storeCount - 1, 2) * rateConfig.multiStoreSurcharge;
+    // ₱30 per additional store, capped at rateConfig.multiStoreLimit additional stops
+    // e.g. 2 stores → ₱30, 3 stores → ₱60 (max), 4+ stores → still ₱60
+    surcharge = Math.min(storeCount - 1, rateConfig.multiStoreLimit) * rateConfig.multiStoreSurcharge;
   }
 
   if (isNonCod) {

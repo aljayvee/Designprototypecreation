@@ -881,6 +881,15 @@ function RidersBoardSection() {
 function TrackingSection() {
   const activeRiders = riders.filter(r => r.status === "On Errand" || r.status === "Available");
 
+  // Simulated GPS positions for Tacurong City area (lat/lng offsets for visual scatter)
+  const riderPositions: Record<number, { top: string; left: string }> = {
+    1: { top: "38%", left: "42%" },
+    2: { top: "52%", left: "58%" },
+    3: { top: "30%", left: "65%" },
+    4: { top: "60%", left: "35%" },
+    5: { top: "45%", left: "72%" },
+  };
+
   return (
     <div className="flex flex-col h-full bg-white rounded-2xl shadow-sm overflow-hidden" style={{ border: "1px solid #E5E7EB" }}>
       {/* Header */}
@@ -891,7 +900,7 @@ function TrackingSection() {
           </div>
           <div>
             <h3 style={{ color: "#1F2937", fontSize: "1rem", fontWeight: 700 }}>Live Fleet Tracking</h3>
-            <p style={{ color: "#6B7280", fontSize: "0.78rem" }}>Real-time GPS mapping of active personnel</p>
+            <p style={{ color: "#6B7280", fontSize: "0.78rem" }}>Real-time GPS mapping of active personnel — Tacurong City</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -907,18 +916,95 @@ function TrackingSection() {
 
       {/* Map View */}
       <div className="flex-1 relative bg-gray-100 flex">
-        {/* The map image itself */}
+        {/* Map + Overlays Column */}
         <div className="flex-1 relative">
-          <img src="/dispatch_map_placeholder.png" alt="Global Tracking Map" className="w-full h-full object-cover" />
-          {/* Overlay gradient for aesthetics */}
-          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-gray-900/10 to-transparent pointer-events-none" />
+          {/* OpenStreetMap embed — Tacurong City, Sultan Kudarat */}
+          <iframe
+            title="Live Fleet Map"
+            width="100%"
+            height="100%"
+            className="absolute inset-0"
+            frameBorder="0"
+            scrolling="no"
+            src="https://www.openstreetmap.org/export/embed.html?bbox=124.6644%2C6.671%2C124.7077%2C6.7034&layer=mapnik&marker=6.6872%2C124.6861"
+            style={{ border: 0, filter: "opacity(0.9) sepia(0.08)" }}
+          />
+
+          {/* Semi-transparent overlay for readability */}
+          <div className="absolute inset-0 bg-white/20 pointer-events-none" />
+
+          {/* Animated Rider Pins */}
+          {activeRiders.map((r, idx) => {
+            const pos = riderPositions[r.id] || { top: `${30 + idx * 12}%`, left: `${40 + idx * 8}%` };
+            const isOnErrand = r.status === "On Errand";
+            const e = errands.find(err => err.riderName === r.name && ["Assigned", "Traveling", "At Store", "Purchased", "En Route"].includes(err.status));
+            return (
+              <div
+                key={r.id}
+                className="absolute"
+                style={{ top: pos.top, left: pos.left, transform: "translate(-50%, -50%)", zIndex: 10 }}
+                title={`${r.name} — ${r.status}${e ? ` | ${e.id}` : ""}`}
+              >
+                {/* Pulse ring */}
+                <div
+                  className="absolute rounded-full animate-ping"
+                  style={{
+                    width: 36, height: 36,
+                    top: "50%", left: "50%",
+                    transform: "translate(-50%, -50%)",
+                    background: isOnErrand ? "rgba(59,130,246,0.3)" : "rgba(16,185,129,0.3)"
+                  }}
+                />
+                {/* Pin circle */}
+                <div
+                  className="relative w-9 h-9 rounded-full flex items-center justify-center border-2 border-white shadow-lg"
+                  style={{ background: isOnErrand ? "#3B82F6" : "#10B981", color: "#fff", fontSize: "0.6rem", fontWeight: 800 }}
+                >
+                  {r.avatar}
+                </div>
+                {/* Label callout */}
+                <div
+                  className="absolute left-1/2 whitespace-nowrap px-2 py-0.5 rounded-full text-white shadow-md"
+                  style={{
+                    top: "calc(100% + 4px)",
+                    transform: "translateX(-50%)",
+                    background: isOnErrand ? "#1D4ED8" : "#065F46",
+                    fontSize: "0.6rem", fontWeight: 700
+                  }}
+                >
+                  {r.name.split(" ")[0]}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Legend */}
+          <div
+            className="absolute bottom-3 left-3 flex items-center gap-3 px-3 py-2 rounded-xl shadow-sm"
+            style={{ background: "rgba(255,255,255,0.92)", border: "1px solid #E5E7EB", fontSize: "0.7rem", fontWeight: 600, color: "#374151" }}
+          >
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-full" style={{ background: "#10B981" }} />
+              Available
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 rounded-full" style={{ background: "#3B82F6" }} />
+              On Errand
+            </div>
+          </div>
+
+          {/* Live badge */}
+          <div className="absolute bottom-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white shadow-sm border border-gray-100">
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <span style={{ color: "#374151", fontSize: "0.7rem", fontWeight: 700 }}>Live Signal</span>
+          </div>
         </div>
 
         {/* Right Sidebar: Rider Activity */}
         <div className="w-72 bg-white flex flex-col z-10 shadow-xl" style={{ borderLeft: "1px solid #E5E7EB" }}>
           <div className="p-4" style={{ borderBottom: "1px solid #E5E7EB", background: "#F9FAFB" }}>
             <p style={{ color: "#1F2937", fontSize: "0.85rem", fontWeight: 700 }}>Active Personnel</p>
-            <p style={{ color: "#6B7280", fontSize: "0.72rem" }}>Locating GPS modules...</p>
+            <p style={{ color: "#6B7280", fontSize: "0.72rem" }}>Tacurong City • GPS syncing...</p>
           </div>
 
           <div className="flex-1 overflow-y-auto p-3 space-y-2">

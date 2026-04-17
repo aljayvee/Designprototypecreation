@@ -147,7 +147,7 @@ export default function RiderPortal() {
               <span className="text-white" style={{ fontSize: "1.1rem", fontWeight: 800 }}>AM</span>
             </div>
             <div>
-              <p className="text-white" style={{ fontSize: "1rem", fontWeight: 700 }}>Carlos Bautista</p>
+              <p className="text-white" style={{ fontSize: "1rem", fontWeight: 700 }}>Al-Dhen Musali</p>
               <p style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.78rem" }}>RDR-001 &bull; ABC-1234</p>
               <div className="flex items-center gap-1 mt-0.5">
                 <button

@@ -212,7 +212,7 @@ export const dispatcherNotifications: Notification[] = [
   { id: 1,  type: "alert",   title: "New Errand — Immediate Dispatch",  message: "SGO-001 Pabili request from Liza Reyes is pending. No rider assigned. Please dispatch now.", time: "Just now", read: false },
   { id: 2,  type: "alert",   title: "High-Value Verification Required", message: "SGO-004 — ₱2,500 Bills Payment via GCash. Verify payment arrangement before assigning rider.", time: "3 min ago", read: false },
   { id: 3,  type: "warning", title: "Errand Threshold Exceeded",        message: "SGO-001 has exceeded the 15-minute wait threshold. Owner has been notified automatically.", time: "10 min ago", read: false },
-  { id: 4,  type: "info",    title: "Rider Status Change",              message: "Carlos Bautista is now Available after completing SGO-002 (Padala — Brgy Buenaflor).", time: "25 min ago", read: false },
+  { id: 4,  type: "info",    title: "Rider Status Change",              message: "Al-Dhen Musali is now Available after completing SGO-002 (Padala — Brgy Buenaflor).", time: "25 min ago", read: false },
   { id: 5,  type: "success", title: "Delivery Confirmed",               message: "SGO-006 delivered by Jose Dela Cruz. Customer confirmed receipt. Service fee: ₱40.", time: "45 min ago", read: true },
   { id: 6,  type: "info",    title: "New Customer Registration",        message: "Ben Navarro registered as a new customer. Profile added to customer records.", time: "1 hr ago", read: true },
 ];
