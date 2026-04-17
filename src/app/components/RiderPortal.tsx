@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import {
   MapPin, Phone, Package, CheckCircle, Clock, DollarSign,
   Navigation, LogOut, Bell, ChevronRight, Camera, AlertCircle,
-  Bike, Star, TrendingUp, Home, ClipboardList, User, X
+  Bike, Star, TrendingUp, Home, ClipboardList, User, X, Zap, Printer
 } from "lucide-react";
 import { riderCurrentErrand, riderEarnings, errands, merchants, conversations, ChatMessage } from "./mockData";
 import { NotificationPanel, useNotifications, riderNotifications } from "./NotificationPanel";
@@ -24,12 +24,17 @@ const stepMeta: Record<StatusStep, { icon: any; label: string; action: string }>
 
 export default function RiderPortal() {
   const navigate = useNavigate();
+  const [isOffline, setIsOffline] = useState(false);
   const [currentStatus, setCurrentStatus] = useState<StatusStep>("Traveling");
   const [navTab, setNavTab] = useState<NavTab>("home");
   const [showComplete, setShowComplete] = useState(false);
   const [uploadedReceipt, setUploadedReceipt] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const { notifications, unreadCount, markAllRead, markRead, dismiss } = useNotifications(riderNotifications);
+  const [isMissionAccepted, setIsMissionAccepted] = useState(false);
+  const [showDeclineModal, setShowDeclineModal] = useState(false);
+  const [declineReason, setDeclineReason] = useState("");
+  const [showWaybill, setShowWaybill] = useState(false);
   const [showDRChat, setShowDRChat] = useState(false);
   const [showCRChat, setShowCRChat] = useState(false);
   const [drMessages, setDrMessages] = useState<ChatMessage[]>(
@@ -41,12 +46,12 @@ export default function RiderPortal() {
 
   const sendDR = (text: string) => {
     const now = new Date();
-    const ts = `${now.getHours()}:${String(now.getMinutes()).padStart(2,"0")} ${now.getHours()>=12?"PM":"AM"}`;
+    const ts = `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")} ${now.getHours() >= 12 ? "PM" : "AM"}`;
     setDrMessages(prev => [...prev, { id: Date.now(), from: "rider", text, timestamp: ts }]);
   };
   const sendCR = (text: string) => {
     const now = new Date();
-    const ts = `${now.getHours()}:${String(now.getMinutes()).padStart(2,"0")} ${now.getHours()>=12?"PM":"AM"}`;
+    const ts = `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")} ${now.getHours() >= 12 ? "PM" : "AM"}`;
     setCrMessages(prev => [...prev, { id: Date.now(), from: "rider", text, timestamp: ts }]);
   };
 
@@ -55,9 +60,16 @@ export default function RiderPortal() {
   const errand = riderCurrentErrand;
 
   const advanceStatus = () => {
+    // Check requirements
+    if (["At Store", "Purchased", "En Route"].includes(currentStatus) && !uploadedReceipt) {
+      toast.error("Please upload the required photo/receipt first.");
+      return;
+    }
+
     if (stepIndex < STATUS_STEPS.length - 1) {
       const next = STATUS_STEPS[stepIndex + 1];
       setCurrentStatus(next);
+      setUploadedReceipt(false); // Reset for next required step
       if (next === "Delivered") {
         setShowComplete(true);
         toast.success("Errand delivered! 🎉", { description: `Earnings of ₱${errand.serviceFee} recorded.` });
@@ -138,8 +150,17 @@ export default function RiderPortal() {
               <p className="text-white" style={{ fontSize: "1rem", fontWeight: 700 }}>Carlos Bautista</p>
               <p style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.78rem" }}>RDR-001 &bull; ABC-1234</p>
               <div className="flex items-center gap-1 mt-0.5">
-                <div className="w-2 h-2 rounded-full bg-green-400" />
-                <span style={{ color: "rgba(255,255,255,0.9)", fontSize: "0.72rem" }}>Active — On Duty</span>
+                <button
+                  onClick={() => {
+                    setIsOffline(!isOffline);
+                    toast.info(isOffline ? "Online — Syncing data..." : "Offline Mode Activated", { description: isOffline ? "Network restored." : "Accessing cached data." });
+                  }}
+                  className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg transition-all"
+                  style={{ background: isOffline ? "#374151" : "#4ADE80", border: "none", cursor: "pointer" }}
+                >
+                  <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                  <span style={{ color: "#FFFFFF", fontSize: "0.6rem", fontWeight: 800 }}>{isOffline ? "OFFLINE" : "LIVE"}</span>
+                </button>
               </div>
             </div>
           </div>
@@ -165,214 +186,268 @@ export default function RiderPortal() {
           {/* HOME TAB */}
           {navTab === "home" && (
             <div className="p-4 space-y-4">
-              {/* Today's Stats */}
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { label: "Trips",    value: riderEarnings.today.trips.toString(), color: "#DC2626" },
-                  { label: "Earned",   value: `₱${riderEarnings.today.total}`,      color: "#1E3A5F" },
-                  { label: "Avg Time", value: "28 min",                              color: "#F59E0B" },
-                ].map(s => (
-                  <div key={s.label} className="rounded-xl p-3 text-center" style={{ background: "#F9FAFB", border: "1px solid #E5E7EB" }}>
-                    <p style={{ color: s.color, fontSize: "1rem", fontWeight: 800 }}>{s.value}</p>
-                    <p style={{ color: "#9CA3AF", fontSize: "0.68rem" }}>{s.label}</p>
+              {isOffline && (
+                <div className="p-4 rounded-2xl text-center shadow-lg animate-in zoom-in-95 duration-300" style={{ background: "#1F2937" }}>
+                  <div className="w-12 h-12 rounded-full bg-gray-700 flex items-center justify-center mx-auto mb-3">
+                    <Navigation size={24} className="text-gray-400" />
                   </div>
-                ))}
-              </div>
-
-              {/* Current Assignment */}
-              {!showComplete ? (
-                <div className="rounded-2xl overflow-hidden shadow-sm" style={{ border: "1px solid #E5E7EB" }}>
-                  <div className="px-4 py-3 flex items-center justify-between" style={{ background: "#DC2626" }}>
-                    <div className="flex items-center gap-2">
-                      <Package size={16} className="text-white" />
-                      <span className="text-white" style={{ fontSize: "0.82rem", fontWeight: 700 }}>Current Assignment</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setShowDRChat(true)}
-                        className="px-2 py-1 rounded-lg text-white border border-white border-opacity-40"
-                        style={{ fontSize: "0.68rem", fontWeight: 600, background: "rgba(255,255,255,0.15)" }}
-                      >
-                        💬 Dispatcher
-                      </button>
-                      <span className="px-2 py-0.5 rounded-full bg-white" style={{ color: "#DC2626", fontSize: "0.7rem", fontWeight: 700 }}>{errand.id}</span>
-                    </div>
-                  </div>
-
-                  <div className="p-4 space-y-3">
-                    {/* Type badges */}
-                    <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-1 rounded-full" style={{ background: "#DBEAFE", color: "#1E40AF", fontSize: "0.72rem", fontWeight: 700 }}>{errand.type}</span>
-                      <span className="px-2.5 py-1 rounded-full" style={{ background: "#FEF3C7", color: "#92400E", fontSize: "0.72rem", fontWeight: 600 }}>{errand.paymentMode}</span>
-                    </div>
-
-                    {/* Merchant Details — shown for Pabili errands with a merchantId */}
-                    {(errand.type === "Pabili" || errand.type === "Bills Payment") && errand.merchantId && (() => {
-                      const m = merchants.find(x => x.id === errand.merchantId);
-                      if (!m) return null;
-                      return (
-                        <div className="p-3 rounded-xl" style={{ background: "#EFF6FF", border: "1px solid #BFDBFE" }}>
-                          <p style={{ color: "#1E40AF", fontSize: "0.68rem", fontWeight: 700, marginBottom: 6, letterSpacing: "0.05em" }}>🏪 MERCHANT DETAILS</p>
-                          <p style={{ color: "#1F2937", fontSize: "0.85rem", fontWeight: 700 }}>{m.businessName}</p>
-                          <p style={{ color: "#374151", fontSize: "0.75rem", marginTop: 2 }}>
-                            {m.purok}, {m.street}, {m.barangay}
-                          </p>
-                          {m.landmark && (
-                            <p style={{ color: "#6B7280", fontSize: "0.72rem", marginTop: 2 }}>📍 {m.landmark}</p>
-                          )}
-                          <p style={{ color: "#374151", fontSize: "0.72rem", marginTop: 4 }}>
-                            🕐 Operating: {m.operatingHours.open} – {m.operatingHours.close}
-                          </p>
-                        </div>
-                      );
-                    })()}
-
-                    {/* Customer */}
-                    <div className="p-3 rounded-xl" style={{ background: "#F9FAFB" }}>
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <p style={{ color: "#1F2937", fontSize: "0.9rem", fontWeight: 700 }}>{errand.customer}</p>
-                          <p style={{ color: "#6B7280", fontSize: "0.78rem" }}>{errand.customerPhone}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => setShowCRChat(true)}
-                            className="p-2 rounded-xl"
-                            style={{ background: "#DBEAFE", color: "#1E40AF" }}
-                            title="Chat Customer"
-                          >
-                            💬
-                          </button>
-                          <a href={`tel:${errand.customerPhone}`} className="p-2 rounded-xl" style={{ background: "#D1FAE5", color: "#065F46" }}>
-                            <Phone size={16} />
-                          </a>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-1.5">
-                        <MapPin size={14} style={{ color: "#9CA3AF", flexShrink: 0, marginTop: 2 }} />
-                        <div>
-                          <p style={{ color: "#374151", fontSize: "0.8rem" }}>{errand.address}</p>
-                          <p style={{ color: "#9CA3AF", fontSize: "0.72rem" }}>📍 {errand.landmark}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Fee Breakdown */}
-                    <div className="p-3 rounded-xl" style={{ background: "#F0FDF4", border: "1px solid #BBF7D0" }}>
-                      <p style={{ color: "#065F46", fontSize: "0.78rem", fontWeight: 700, marginBottom: 6 }}>Fee Breakdown</p>
-                      <div className="space-y-1">
-                        <div className="flex justify-between">
-                          <span style={{ color: "#374151", fontSize: "0.78rem" }}>Base Delivery Fee</span>
-                          <span style={{ color: "#1F2937", fontSize: "0.78rem", fontWeight: 600 }}>₱{errand.serviceFee}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span style={{ color: "#374151", fontSize: "0.78rem" }}>Distance</span>
-                          <span style={{ color: "#6B7280", fontSize: "0.78rem" }}>{errand.distance}</span>
-                        </div>
-                        <div className="flex justify-between pt-1" style={{ borderTop: "1px dashed #BBF7D0" }}>
-                          <span style={{ color: "#065F46", fontSize: "0.82rem", fontWeight: 700 }}>Your Earnings</span>
-                          <span style={{ color: "#065F46", fontSize: "0.82rem", fontWeight: 800 }}>₱{errand.serviceFee}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Progress Steps */}
-                    <div>
-                      <p style={{ color: "#374151", fontSize: "0.8rem", fontWeight: 600, marginBottom: 8 }}>Progress</p>
-                      <div className="space-y-2">
-                        {STATUS_STEPS.map((step, i) => {
-                          const Icon = stepMeta[step].icon;
-                          const done = i < stepIndex;
-                          const active = i === stepIndex;
-                          return (
-                            <div key={step} className="flex items-center gap-3">
-                              <div
-                                className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
-                                style={{
-                                  background: done ? "#DC2626" : active ? "#FEE2E2" : "#F3F4F6",
-                                  border: active ? "2px solid #DC2626" : "2px solid transparent",
-                                }}
-                              >
-                                <Icon size={13} style={{ color: done ? "#FFFFFF" : active ? "#DC2626" : "#9CA3AF" }} />
-                              </div>
-                              <span style={{ color: done ? "#1F2937" : active ? "#DC2626" : "#9CA3AF", fontSize: "0.8rem", fontWeight: active ? 700 : done ? 500 : 400 }}>
-                                {stepMeta[step].label}
-                              </span>
-                              {done && <CheckCircle size={14} style={{ color: "#DC2626", marginLeft: "auto" }} />}
-                              {active && (
-                                <span className="ml-auto px-2 py-0.5 rounded-full" style={{ background: "#FEE2E2", color: "#DC2626", fontSize: "0.65rem", fontWeight: 700 }}>
-                                  CURRENT
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Receipt upload */}
-                    {(currentStatus === "At Store" || currentStatus === "Purchased") && (
-                      <button
-                        onClick={() => { setUploadedReceipt(true); toast.success("Receipt uploaded successfully!"); }}
-                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl"
-                        style={{
-                          background: uploadedReceipt ? "#D1FAE5" : "#FEF3C7",
-                          border: `1.5px dashed ${uploadedReceipt ? "#10B981" : "#F59E0B"}`,
-                          color: uploadedReceipt ? "#065F46" : "#92400E",
-                          fontSize: "0.82rem",
-                        }}
-                      >
-                        <Camera size={16} />
-                        {uploadedReceipt ? "✓ Receipt Uploaded" : "Upload Receipt Photo"}
-                      </button>
-                    )}
-
-                    {/* Action button */}
-                    {!isDelivered && (
-                      <button
-                        onClick={advanceStatus}
-                        className="w-full py-3.5 rounded-xl text-white flex items-center justify-center gap-2"
-                        style={{ background: "linear-gradient(135deg, #DC2626, #EF4444)", fontSize: "0.9rem", fontWeight: 700 }}
-                      >
-                        {stepMeta[currentStatus].action} <ChevronRight size={18} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                /* Completion card */
-                <div className="rounded-2xl p-6 text-center" style={{ background: "linear-gradient(135deg, #DC2626, #EF4444)" }}>
-                  <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mx-auto mb-3">
-                    <CheckCircle size={32} style={{ color: "#DC2626" }} />
-                  </div>
-                  <h3 className="text-white mb-1" style={{ fontSize: "1.1rem" }}>Errand Completed!</h3>
-                  <p style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.82rem" }}>Great job, Carlos! Payment collected.</p>
-                  <div className="mt-4 p-3 rounded-xl bg-white bg-opacity-20">
-                    <p style={{ color: "#FFFFFF", fontSize: "1.3rem", fontWeight: 800 }}>₱{errand.serviceFee}</p>
-                    <p style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.75rem" }}>Earnings from this trip</p>
-                  </div>
+                  <h3 className="text-white font-bold mb-1">You're Offline</h3>
+                  <p className="text-gray-400 text-xs mb-4">Connection lost. Use your cached files to complete the delivery.</p>
                   <button
-                    onClick={() => {
-                      setShowComplete(false);
-                      setCurrentStatus("Traveling");
-                      setUploadedReceipt(false);
-                      toast.success("Next errand accepted!", { description: "Stand by for the dispatcher's assignment." });
-                    }}
-                    className="mt-4 w-full py-2.5 rounded-xl bg-white"
-                    style={{ color: "#DC2626", fontSize: "0.85rem", fontWeight: 700 }}
+                    onClick={() => setShowWaybill(true)}
+                    className="w-full py-3 bg-red-600 text-white rounded-xl font-bold text-sm shadow-lg shadow-red-900/20"
                   >
-                    Accept Next Errand
+                    View Cached Waybill
                   </button>
                 </div>
               )}
+              {!isOffline && (
+                <>
+                  {/* Today's Stats */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { label: "Trips", value: riderEarnings.today.trips.toString(), color: "#DC2626" },
+                      { label: "Earned", value: `₱${riderEarnings.today.total}`, color: "#1E3A5F" },
+                      { label: "Avg Time", value: "28 min", color: "#F59E0B" },
+                    ].map(s => (
+                      <div key={s.label} className="rounded-xl p-3 text-center" style={{ background: "#F9FAFB", border: "1px solid #E5E7EB" }}>
+                        <p style={{ color: s.color, fontSize: "1rem", fontWeight: 800 }}>{s.value}</p>
+                        <p style={{ color: "#9CA3AF", fontSize: "0.68rem" }}>{s.label}</p>
+                      </div>
+                    ))}
+                  </div>
 
-              {/* Reminder notice */}
-              <div className="flex items-start gap-3 p-3 rounded-xl" style={{ background: "#FEF3C7", border: "1px solid #FDE68A" }}>
-                <AlertCircle size={16} style={{ color: "#D97706", flexShrink: 0, marginTop: 2 }} />
-                <p style={{ color: "#92400E", fontSize: "0.78rem" }}>
-                  <strong>Reminder:</strong> Always get customer consent before taking photos of their property.
-                </p>
-              </div>
+                  {/* Mission Acceptance */}
+                  {!isMissionAccepted ? (
+                    <div className="rounded-2xl overflow-hidden shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ border: "2px solid #DC2626", background: "#FFF" }}>
+                      <div className="p-5 text-center" style={{ background: "#FEF2F2" }}>
+                        <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
+                          <Zap size={32} className="text-red-600 animate-pulse" />
+                        </div>
+                        <h3 style={{ color: "#1F2937", fontSize: "1.2rem", fontWeight: 800 }}>New Mission!</h3>
+                        <p style={{ color: "#6B7280", fontSize: "0.82rem" }}>You have a new {errand.type} request</p>
+                      </div>
+                      <div className="p-5 space-y-4">
+                        <div className="flex justify-between items-center pb-3 border-b border-gray-100">
+                          <span style={{ color: "#6B7280", fontSize: "0.75rem" }}>Est. Distance</span>
+                          <span style={{ color: "#1F2937", fontSize: "0.85rem", fontWeight: 700 }}>{errand.distance}</span>
+                        </div>
+                        <div className="flex justify-between items-center pb-3 border-b border-gray-100">
+                          <span style={{ color: "#6B7280", fontSize: "0.75rem" }}>Total Earnings</span>
+                          <span style={{ color: "#DC2626", fontSize: "0.95rem", fontWeight: 800 }}>₱{errand.serviceFee}</span>
+                        </div>
+                        <div className="space-y-2 pt-2">
+                          <button
+                            onClick={() => { setIsMissionAccepted(true); toast.success("Mission Accepted! Drive safely."); }}
+                            className="w-full py-4 rounded-2xl text-white font-bold text-lg shadow-lg active:scale-95 transition-all"
+                            style={{ background: "linear-gradient(135deg, #DC2626, #EF4444)" }}
+                          >
+                            Accept Mission
+                          </button>
+                          <button
+                            onClick={() => setShowDeclineModal(true)}
+                            className="w-full py-3 rounded-2xl text-gray-500 font-semibold text-sm hover:bg-gray-50 transition-all"
+                          >
+                            Decline
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : !showComplete ? (
+                    <div className="rounded-2xl overflow-hidden shadow-sm" style={{ border: "1px solid #E5E7EB" }}>
+                      <div className="px-4 py-3 flex items-center justify-between" style={{ background: "#DC2626" }}>
+                        <div className="flex items-center gap-2">
+                          <Package size={16} className="text-white" />
+                          <span className="text-white" style={{ fontSize: "0.82rem", fontWeight: 700 }}>Current Assignment</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => setShowWaybill(true)}
+                            className="px-2 py-1 rounded-lg text-white border border-white border-opacity-40"
+                            style={{ fontSize: "0.68rem", fontWeight: 600, background: "rgba(255,255,255,0.15)" }}
+                          >
+                            📄 Waybill
+                          </button>
+                          <span className="px-2 py-0.5 rounded-full bg-white" style={{ color: "#DC2626", fontSize: "0.7rem", fontWeight: 700 }}>{errand.id}</span>
+                        </div>
+                      </div>
+
+                      <div className="p-4 space-y-3">
+                        {/* Type badges */}
+                        <div className="flex items-center gap-2">
+                          <span className="px-2.5 py-1 rounded-full" style={{ background: "#DBEAFE", color: "#1E40AF", fontSize: "0.72rem", fontWeight: 700 }}>{errand.type}</span>
+                          <span className="px-2.5 py-1 rounded-full" style={{ background: "#FEF3C7", color: "#92400E", fontSize: "0.72rem", fontWeight: 600 }}>{errand.paymentMode}</span>
+                        </div>
+
+                        {/* Merchant Details — shown for Pabili errands with a merchantId */}
+                        {(errand.type === "Pabili" || errand.type === "Bills Payment") && errand.merchantId && (() => {
+                          const m = merchants.find(x => x.id === errand.merchantId);
+                          if (!m) return null;
+                          return (
+                            <div className="p-3 rounded-xl" style={{ background: "#EFF6FF", border: "1px solid #BFDBFE" }}>
+                              <p style={{ color: "#1E40AF", fontSize: "0.68rem", fontWeight: 700, marginBottom: 6, letterSpacing: "0.05em" }}>🏪 MERCHANT DETAILS</p>
+                              <p style={{ color: "#1F2937", fontSize: "0.85rem", fontWeight: 700 }}>{m.businessName}</p>
+                              <p style={{ color: "#374151", fontSize: "0.75rem", marginTop: 2 }}>
+                                {m.purok}, {m.street}, {m.barangay}
+                              </p>
+                              {m.landmark && (
+                                <p style={{ color: "#6B7280", fontSize: "0.72rem", marginTop: 2 }}>📍 {m.landmark}</p>
+                              )}
+                              <p style={{ color: "#374151", fontSize: "0.72rem", marginTop: 4 }}>
+                                🕐 Operating: {m.operatingHours.open} – {m.operatingHours.close}
+                              </p>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Customer */}
+                        <div className="p-3 rounded-xl" style={{ background: "#F9FAFB" }}>
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <p style={{ color: "#1F2937", fontSize: "0.9rem", fontWeight: 700 }}>{errand.customer}</p>
+                              <p style={{ color: "#6B7280", fontSize: "0.78rem" }}>{errand.customerPhone}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => setShowCRChat(true)}
+                                className="p-2 rounded-xl"
+                                style={{ background: "#DBEAFE", color: "#1E40AF" }}
+                                title="Chat Customer"
+                              >
+                                💬
+                              </button>
+                              <a href={`tel:${errand.customerPhone}`} className="p-2 rounded-xl" style={{ background: "#D1FAE5", color: "#065F46" }}>
+                                <Phone size={16} />
+                              </a>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-1.5">
+                            <MapPin size={14} style={{ color: "#9CA3AF", flexShrink: 0, marginTop: 2 }} />
+                            <div>
+                              <p style={{ color: "#374151", fontSize: "0.8rem" }}>{errand.address}</p>
+                              <p style={{ color: "#9CA3AF", fontSize: "0.72rem" }}>📍 {errand.landmark}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Fee Breakdown */}
+                        <div className="p-3 rounded-xl" style={{ background: "#F0FDF4", border: "1px solid #BBF7D0" }}>
+                          <p style={{ color: "#065F46", fontSize: "0.78rem", fontWeight: 700, marginBottom: 6 }}>Fee Breakdown</p>
+                          <div className="space-y-1">
+                            <div className="flex justify-between">
+                              <span style={{ color: "#374151", fontSize: "0.78rem" }}>Base Delivery Fee</span>
+                              <span style={{ color: "#1F2937", fontSize: "0.78rem", fontWeight: 600 }}>₱{errand.serviceFee}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span style={{ color: "#374151", fontSize: "0.78rem" }}>Distance</span>
+                              <span style={{ color: "#6B7280", fontSize: "0.78rem" }}>{errand.distance}</span>
+                            </div>
+                            <div className="flex justify-between pt-1" style={{ borderTop: "1px dashed #BBF7D0" }}>
+                              <span style={{ color: "#065F46", fontSize: "0.82rem", fontWeight: 700 }}>Your Earnings</span>
+                              <span style={{ color: "#065F46", fontSize: "0.82rem", fontWeight: 800 }}>₱{errand.serviceFee}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Progress Steps */}
+                        <div>
+                          <p style={{ color: "#374151", fontSize: "0.8rem", fontWeight: 600, marginBottom: 8 }}>Progress</p>
+                          <div className="space-y-2">
+                            {STATUS_STEPS.map((step, i) => {
+                              const Icon = stepMeta[step].icon;
+                              const done = i < stepIndex;
+                              const active = i === stepIndex;
+                              return (
+                                <div key={step} className="flex items-center gap-3">
+                                  <div
+                                    className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
+                                    style={{
+                                      background: done ? "#DC2626" : active ? "#FEE2E2" : "#F3F4F6",
+                                      border: active ? "2px solid #DC2626" : "2px solid transparent",
+                                    }}
+                                  >
+                                    <Icon size={13} style={{ color: done ? "#FFFFFF" : active ? "#DC2626" : "#9CA3AF" }} />
+                                  </div>
+                                  <span style={{ color: done ? "#1F2937" : active ? "#DC2626" : "#9CA3AF", fontSize: "0.8rem", fontWeight: active ? 700 : done ? 500 : 400 }}>
+                                    {stepMeta[step].label}
+                                  </span>
+                                  {done && <CheckCircle size={14} style={{ color: "#DC2626", marginLeft: "auto" }} />}
+                                  {active && (
+                                    <span className="ml-auto px-2 py-0.5 rounded-full" style={{ background: "#FEE2E2", color: "#DC2626", fontSize: "0.65rem", fontWeight: 700 }}>
+                                      CURRENT
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Validation Photo Upload */}
+                        {["At Store", "Purchased", "En Route"].includes(currentStatus) && (
+                          <button
+                            onClick={() => { setUploadedReceipt(true); toast.success(currentStatus === "En Route" ? "Delivery Photo uploaded!" : "Receipt uploaded successfully!"); }}
+                            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl mb-3"
+                            style={{
+                              background: uploadedReceipt ? "#D1FAE5" : "#FEF3C7",
+                              border: `1.5px dashed ${uploadedReceipt ? "#10B981" : "#F59E0B"}`,
+                              color: uploadedReceipt ? "#065F46" : "#92400E",
+                              fontSize: "0.82rem",
+                            }}
+                          >
+                            <Camera size={16} />
+                            {uploadedReceipt
+                              ? "✓ Photo Verified"
+                              : currentStatus === "En Route"
+                                ? "Capture Delivery Photo"
+                                : "Upload Receipt Photo"}
+                          </button>
+                        )}
+
+                        {/* Action button */}
+                        {!isDelivered && (
+                          <button
+                            onClick={advanceStatus}
+                            className="w-full py-3.5 rounded-xl text-white flex items-center justify-center gap-2"
+                            style={{ background: "linear-gradient(135deg, #DC2626, #EF4444)", fontSize: "0.9rem", fontWeight: 700 }}
+                          >
+                            {stepMeta[currentStatus].action} <ChevronRight size={18} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    /* Completion card */
+                    <div className="rounded-2xl p-6 text-center" style={{ background: "linear-gradient(135deg, #DC2626, #EF4444)" }}>
+                      <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mx-auto mb-3">
+                        <CheckCircle size={32} style={{ color: "#DC2626" }} />
+                      </div>
+                      <h3 className="text-white mb-1" style={{ fontSize: "1.1rem" }}>Errand Completed!</h3>
+                      <p style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.82rem" }}>Great job, Carlos! Payment collected.</p>
+                      <div className="mt-4 p-3 rounded-xl bg-white bg-opacity-20">
+                        <p style={{ color: "#FFFFFF", fontSize: "1.3rem", fontWeight: 800 }}>₱{errand.serviceFee}</p>
+                        <p style={{ color: "rgba(255,255,255,0.85)", fontSize: "0.75rem" }}>Earnings from this trip</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setShowComplete(false);
+                          setCurrentStatus("Traveling");
+                          setUploadedReceipt(false);
+                          toast.success("Next errand accepted!", { description: "Stand by for the dispatcher's assignment." });
+                        }}
+                        className="mt-4 w-full py-2.5 rounded-xl bg-white"
+                        style={{ color: "#DC2626", fontSize: "0.85rem", fontWeight: 700 }}
+                      >
+                        Accept Next Errand
+                      </button>
+                    </div>
+                  )}
+
+                  {!isOffline && (
+                    <div></div>
+                  )}
+                </>
+              )}
             </div>
           )}
 
@@ -407,8 +482,8 @@ export default function RiderPortal() {
             <div className="p-4 space-y-4">
               <h3 style={{ color: "#1F2937" }}>My Earnings</h3>
               {[
-                { period: "Today",      data: riderEarnings.today },
-                { period: "This Week",  data: riderEarnings.week },
+                { period: "Today", data: riderEarnings.today },
+                { period: "This Week", data: riderEarnings.week },
                 { period: "This Month", data: riderEarnings.month },
               ].map(({ period, data }) => (
                 <div key={period} className="rounded-2xl p-5 shadow-sm" style={{ border: "1px solid #E5E7EB", background: "#FFFFFF" }}>
@@ -457,12 +532,11 @@ export default function RiderPortal() {
               </div>
 
               {[
-                { label: "Phone Number",           value: "09391234567" },
-                { label: "Vehicle",                value: "Motorcycle — ABC-1234" },
-                { label: "Email",                  value: "ad.musali@company.ph" },
-                { label: "Status",              value: "Active" },
+                { label: "Phone Number", value: "09391234567" },
+                { label: "Email", value: "ad.musali@company.ph" },
+                { label: "Status", value: "Active" },
                 { label: "Total Trips (All Time)", value: "248" },
-                { label: "Join Date",           value: "January 15, 2024" },
+                { label: "Join Date", value: "January 15, 2024" },
               ].map(item => (
                 <div key={item.label} className="flex items-center justify-between py-3 px-1" style={{ borderBottom: "1px solid #F3F4F6" }}>
                   <span style={{ color: "#6B7280", fontSize: "0.82rem" }}>{item.label}</span>
@@ -488,10 +562,10 @@ export default function RiderPortal() {
           style={{ background: "#FFFFFF", borderTop: "1px solid #F3F4F6", boxShadow: "0 -4px 20px rgba(0,0,0,0.06)" }}
         >
           {[
-            { id: "home"     as NavTab, icon: Home,         label: "Home" },
-            { id: "tasks"    as NavTab, icon: ClipboardList, label: "Tasks" },
-            { id: "earnings" as NavTab, icon: DollarSign,    label: "Earnings" },
-            { id: "profile"  as NavTab, icon: User,          label: "Profile" },
+            { id: "home" as NavTab, icon: Home, label: "Home" },
+            { id: "tasks" as NavTab, icon: ClipboardList, label: "Tasks" },
+            { id: "earnings" as NavTab, icon: DollarSign, label: "Earnings" },
+            { id: "profile" as NavTab, icon: User, label: "Profile" },
           ].map(({ id, icon: Icon, label }) => (
             <button
               key={id}
@@ -612,6 +686,100 @@ export default function RiderPortal() {
           );
         })()}
 
+        {/* ── DECLINE REASON MODAL ── */}
+        {showDeclineModal && (
+          <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/60 p-6 backdrop-blur-sm">
+            <div className="bg-white rounded-3xl w-full max-w-sm overflow-hidden border border-white/20">
+              <div className="p-6 text-center">
+                <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4 text-red-600">
+                  <AlertCircle size={32} />
+                </div>
+                <h3 className="font-bold text-xl mb-2">Decline Mission?</h3>
+                <p className="text-gray-500 text-sm mb-6">Please provide a reason for declining this errand.</p>
+
+                <textarea
+                  value={declineReason}
+                  onChange={(e) => setDeclineReason(e.target.value)}
+                  placeholder="Reason..."
+                  className="w-full h-24 p-4 rounded-2xl bg-gray-50 border border-gray-200 text-sm outline-none mb-4"
+                />
+
+                <div className="grid grid-cols-2 gap-3">
+                  <button onClick={() => setShowDeclineModal(false)} className="py-3 bg-gray-100 rounded-2xl font-bold">Cancel</button>
+                  <button
+                    disabled={!declineReason.trim()}
+                    onClick={() => {
+                      toast.error("Mission Declined");
+
+                      // Save decline reason for Dispatcher/Owner to see
+                      const newLog = {
+                        id: Date.now().toString(),
+                        errandId: errand.id,
+                        riderId: customerRider?.id || 1,
+                        riderName: customerRider?.name || "Al-Dhen Musali",
+                        reason: declineReason.trim(),
+                        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                      };
+
+                      localStorage.setItem("decline_log", JSON.stringify(newLog));
+
+                      setShowDeclineModal(false);
+                      setDeclineReason("");
+                    }}
+                    className="py-3 bg-red-600 text-white rounded-2xl font-bold disabled:opacity-50"
+                  >Confirm</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── DIGITAL WAYBILL MODAL ── */}
+        {showWaybill && (
+          <div className="absolute inset-0 z-[100] bg-gray-100 overflow-y-auto">
+            <div className="min-h-full p-6 flex flex-col gap-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center text-white font-black">S</div>
+                  <span className="font-bold tracking-tight text-sm">DIGITAL WAYBILL</span>
+                </div>
+                <button onClick={() => setShowWaybill(false)} className="p-2 rounded-xl bg-white shadow-sm border border-gray-200"><X size={18} /></button>
+              </div>
+
+              <div className="bg-white p-6 shadow-xl border border-gray-200 rounded-2xl">
+                <div className="text-center border-b-2 border-dashed border-gray-200 pb-4 mb-4">
+                  <h1 className="text-2xl font-black text-gray-900 tracking-tighter">{errand.id}</h1>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-[0.6rem] font-black text-gray-400 uppercase mb-1">Customer</p>
+                    <p className="font-bold">{errand.customer}</p>
+                  </div>
+                  <div>
+                    <p className="text-[0.6rem] font-black text-gray-400 uppercase mb-1">Destination</p>
+                    <p className="text-sm font-medium">{errand.address}</p>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-xl space-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-gray-500">Service Fee</span>
+                      <span className="font-bold">₱{errand.serviceFee}</span>
+                    </div>
+                    <div className="flex justify-between pt-2 border-t border-gray-200">
+                      <span className="font-black text-gray-900 text-sm">TOTAL TO COLLECT</span>
+                      <span className="font-black text-red-600">₱{errand.amount}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-8 text-center">
+                  <div className="w-20 h-0.5 border-b border-gray-300 mx-auto mb-1" />
+                  <p className="text-[0.5rem] font-bold text-gray-400 uppercase">Signature</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

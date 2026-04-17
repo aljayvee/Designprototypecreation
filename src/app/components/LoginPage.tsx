@@ -63,7 +63,19 @@ export default function LoginPage() {
       setRegError("Please enter a valid 11-digit phone number.");
       return;
     }
+    
+    // Simulate adding to database
+    const newUsername = regData.fullName.toLowerCase().replace(/\s+/g, '');
+    DUMMY_ACCOUNTS.push({
+      username: newUsername,
+      password: regData.password,
+      role: "customer"
+    });
+    
     setRegSuccess(true);
+    toast.success("Account created! You can now log in.", {
+      description: `Username: ${newUsername}`
+    });
   };
 
   return (

@@ -12,7 +12,7 @@ import { toast, Toaster } from "sonner";
 const NAVY = "#1E3A5F";
 const NAVY_DARK = "#162D4A";
 
-type Section = "queue" | "active" | "riders" | "customers" | "history";
+type Section = "queue" | "active" | "riders" | "customers" | "history" | "tracking";
 
 const statusConfig: Record<string, { bg: string; text: string }> = {
   Pending: { bg: "#FEF3C7", text: "#92400E" },
@@ -89,8 +89,8 @@ function NewErrandModal({ onClose }: { onClose: () => void }) {
             <label className="block mb-1.5" style={{ color: "#374151", fontSize: "0.82rem" }}>Errand Type *</label>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { id: "Pabili",        bg: "#DBEAFE", text: "#1E40AF" },
-                { id: "Padala",        bg: "#D1FAE5", text: "#065F46" },
+                { id: "Pabili", bg: "#DBEAFE", text: "#1E40AF" },
+                { id: "Padala", bg: "#D1FAE5", text: "#065F46" },
                 { id: "Bills Payment", bg: "#FEF3C7", text: "#92400E" },
               ].map(t => (
                 <button key={t.id} type="button" onClick={() => setErrandType(t.id)}
@@ -163,12 +163,12 @@ function NewErrandModal({ onClose }: { onClose: () => void }) {
 
 // ─── ADD CUSTOMER MODAL ───────────────────────────────────────────────────────
 function AddCustomerModal({ onClose, onAdd }: { onClose: () => void; onAdd: (c: any) => void }) {
-  const [name, setName]         = useState("");
-  const [phone, setPhone]       = useState("");
-  const [address, setAddress]   = useState("");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
   const [landmark, setLandmark] = useState("");
-  const [error, setError]       = useState("");
-  const [saved, setSaved]       = useState(false);
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
 
   const handleSubmit = () => {
     if (!name.trim() || !phone.trim()) { setError("Name and Phone are required."); return; }
@@ -288,11 +288,7 @@ function WaybillModal({ customer, onClose }: { customer: typeof customers[0]; on
             </div>
           )}
           <div className="flex gap-3">
-            <button onClick={() => { window.print(); toast.success("Waybill sent to printer!"); }}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-white"
-              style={{ background: NAVY, fontSize: "0.82rem" }}>
-              <Printer size={14} /> Print Waybill
-            </button>
+
             <button onClick={onClose} className="flex-1 py-2.5 rounded-xl"
               style={{ border: "1.5px solid #E5E7EB", color: "#374151", fontSize: "0.82rem" }}>
               Close
@@ -339,7 +335,7 @@ function DispatchQueueSection() {
               return { ...prev, [data.errandId || "1"]: [...errandMessages, newMsg] };
             });
           }
-        } catch(err) {
+        } catch (err) {
           // ignore corrupted payloads
         }
       }
@@ -347,11 +343,11 @@ function DispatchQueueSection() {
         try {
           const msg = JSON.parse(e.newValue);
           setCdMessages(prev => {
-            const errandMessages = prev["SGO-001"] || []; 
+            const errandMessages = prev["SGO-001"] || [];
             return { ...prev, ["SGO-001"]: [...errandMessages, msg] };
           });
           localStorage.removeItem("chat_c2d");
-        } catch(err) {}
+        } catch (err) { }
       }
     };
     window.addEventListener("storage", handleStorage);
@@ -398,17 +394,6 @@ function DispatchQueueSection() {
         })}
       </div>
 
-      {/* Alerts */}
-      <div className="flex items-start gap-3 p-4 rounded-xl" style={{ background: "#FEF3C7", border: "1px solid #FDE68A" }}>
-        <AlertTriangle size={18} style={{ color: "#D97706", flexShrink: 0, marginTop: 2 }} />
-        <div>
-          <p style={{ color: "#92400E", fontSize: "0.85rem", fontWeight: 600 }}>High-Value Transaction Alert</p>
-          <p style={{ color: "#92400E", fontSize: "0.8rem" }}>
-            SGO-004 — Ben Navarro — ₱2,500 Bills Payment via Cash on Delivery. Please verify payment arrangements before dispatch.
-          </p>
-        </div>
-      </div>
-
       {/* Pending Queue */}
       <div className="bg-white rounded-2xl shadow-sm" style={{ border: "1px solid #E5E7EB" }}>
         <div className="p-4 flex items-center justify-between" style={{ borderBottom: "1px solid #F3F4F6" }}>
@@ -436,10 +421,10 @@ function DispatchQueueSection() {
                       const m = merchants.find(x => x.id === errand.merchantId);
                       if (!m) return null;
                       const now = new Date();
-                      const cur = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+                      const cur = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
                       const isAutoClosed = m.status === "Active" && cur > m.operatingHours.close;
                       const effStatus = m.status === "Inactive" ? "Inactive" : m.status === "Temporarily Closed" ? "Unavailable" : isAutoClosed ? "Closed" : "Available";
-                      const cfg: Record<string,{bg:string;text:string}> = {
+                      const cfg: Record<string, { bg: string; text: string }> = {
                         Available: { bg: "#D1FAE5", text: "#065F46" },
                         Unavailable: { bg: "#FEF3C7", text: "#92400E" },
                         Closed: { bg: "#FEE2E2", text: "#991B1B" },
@@ -512,7 +497,7 @@ function DispatchQueueSection() {
         const msgs: ChatMessage[] = cdMessages[errand.id] ?? [];
         const sendMsg = (text: string) => {
           const now = new Date();
-          const ts = `${now.getHours()}:${String(now.getMinutes()).padStart(2,"0")} ${now.getHours() >= 12 ? "PM" : "AM"}`;
+          const ts = `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")} ${now.getHours() >= 12 ? "PM" : "AM"}`;
           const newMsg: ChatMessage = { id: Date.now(), from: "dispatcher", text, timestamp: ts };
           setCdMessages(prev => ({ ...prev, [errand.id]: [...(prev[errand.id] ?? []), newMsg] }));
           localStorage.setItem("chat_d2c", JSON.stringify(newMsg));
@@ -550,7 +535,18 @@ function DispatchQueueSection() {
                         background: isMe ? NAVY : "#F3F4F6",
                         color: isMe ? "#fff" : "#1F2937",
                         fontSize: "0.82rem", lineHeight: 1.5, whiteSpace: "pre-wrap"
-                      }}>{msg.text}</div>
+                      }}>
+                        {msg.text.includes("*Pabili Request Summary*") ? (
+                          <div className="space-y-1">
+                            <p className="font-bold border-b border-gray-200 pb-1 mb-1">{msg.text.split("\n")[0]}</p>
+                            {msg.text.split("\n").slice(2).map((line, li) => {
+                              if (line.startsWith("*Category")) return <p key={li} className="font-bold text-blue-600 mt-2 text-[0.75rem] uppercase">{line.replace(/\*/g, '')}</p>;
+                              if (line.startsWith("- ")) return <div key={li} className="flex items-center gap-2 pl-2"><div className="w-1 h-1 rounded-full bg-gray-400" /><span>{line.substring(2)}</span></div>;
+                              return <p key={li}>{line}</p>;
+                            })}
+                          </div>
+                        ) : msg.text}
+                      </div>
                       <span style={{ fontSize: "0.62rem", color: "#9CA3AF", marginTop: 2 }}>{msg.timestamp}</span>
                     </div>
                   );
@@ -572,19 +568,6 @@ function DispatchQueueSection() {
                     className="px-4 py-2 rounded-xl text-white"
                     style={{ background: NAVY, fontSize: "0.82rem", fontWeight: 600 }}
                   >Send</button>
-                </div>
-                <div className="flex gap-2 mb-2">
-                  <button
-                    onClick={() => {
-                      localStorage.setItem("requestPayment", JSON.stringify({ ts: Date.now(), errandId: errand.id }));
-                      sendMsg("[Requested Payment Mode]");
-                      toast.success("Payment request sent to customer.");
-                    }}
-                    className="w-full py-2 rounded-xl"
-                    style={{ background: "#F3F4F6", color: "#374151", border: "1px solid #E5E7EB", fontSize: "0.82rem", fontWeight: 600 }}
-                  >
-                    💰 Request Payment Mode
-                  </button>
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -679,6 +662,22 @@ function DispatchQueueSection() {
 
 // ─── ACTIVE ERRANDS SECTION ──────────────────────────────────────────────────
 function ActiveErrandsSection() {
+  const [assignModal, setAssignModal] = useState<Errand | null>(null);
+  const [selectedRider, setSelectedRider] = useState<number | null>(null);
+  const [assigned, setAssigned] = useState<Record<string, string>>({});
+
+  const handleAssign = () => {
+    if (!selectedRider || !assignModal) return;
+    const rider = riders.find(r => r.id === selectedRider);
+    if (rider) {
+      setAssigned(prev => ({ ...prev, [assignModal.id]: rider.name }));
+      toast.success(`${assignModal.id} successfully reassigned to ${rider.name}!`);
+      localStorage.setItem("riderAssigned", JSON.stringify({ errandId: assignModal.id, ts: Date.now(), riderName: rider.name }));
+    }
+    setAssignModal(null);
+    setSelectedRider(null);
+  };
+
   const activeErrands = errands.filter(e =>
     ["Assigned", "Traveling", "At Store", "Purchased", "En Route"].includes(e.status)
   );
@@ -698,7 +697,13 @@ function ActiveErrandsSection() {
                 </div>
                 <div className="flex items-center gap-4">
                   <span style={{ color: "#374151", fontSize: "0.82rem" }}>{e.customer} — {e.customerPhone}</span>
-                  <span style={{ color: "#9CA3AF", fontSize: "0.78rem" }}>Rider: <strong style={{ color: "#1F2937" }}>{e.riderName}</strong></span>
+                  <span style={{ color: "#9CA3AF", fontSize: "0.78rem" }}>
+                    Rider:{" "}
+                    <strong style={{ color: assigned[e.id] ? "#DC2626" : "#1F2937" }}>
+                      {assigned[e.id] || e.riderName}
+                    </strong>
+                    {assigned[e.id] && <span style={{ color: "#DC2626", marginLeft: 4, fontSize: "0.65rem", fontWeight: 700 }}>(REASSIGNED)</span>}
+                  </span>
                 </div>
                 <div className="flex items-center gap-1.5 mt-1">
                   <MapPin size={13} style={{ color: "#9CA3AF" }} />
@@ -738,9 +743,82 @@ function ActiveErrandsSection() {
                 </React.Fragment>
               ))}
             </div>
+
+            {/* Action Bar (REQ019) */}
+            <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+              <span className="text-xs text-gray-500 font-medium">GPS Signal Active • Status: Monitored</span>
+              <button 
+                onClick={() => setAssignModal(e)} 
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-white hover:bg-red-50 text-red-700 border border-red-200 shadow-sm"
+              >
+                <RefreshCw size={12} /> Reassign / Override
+              </button>
+            </div>
           </div>
         );
       })}
+
+      {/* Assign / Reassign Modal */}
+      {assignModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: "rgba(0,0,0,0.5)" }}>
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 style={{ color: "#1F2937" }}>Reassign Rider — {assignModal.id}</h3>
+              <button onClick={() => setAssignModal(null)} style={{ color: "#9CA3AF" }}><X size={20} /></button>
+            </div>
+
+            <div className="p-3 rounded-xl mb-4" style={{ background: "#F9FAFB", border: "1px solid #E5E7EB" }}>
+              <p style={{ color: "#374151", fontSize: "0.82rem", fontWeight: 600 }}>{assignModal.customer} — {assignModal.type}</p>
+              <p style={{ color: "#6B7280", fontSize: "0.78rem" }}>{assignModal.address}</p>
+              <p style={{ color: "#6B7280", fontSize: "0.78rem" }}>{assignModal.landmark} &bull; {assignModal.distance} &bull; ₱{assignModal.amount.toLocaleString()}</p>
+            </div>
+
+            <p className="mb-3" style={{ color: "#374151", fontSize: "0.85rem", fontWeight: 600 }}>Select New Rider to Reassign:</p>
+            <div className="space-y-2 max-h-60 overflow-y-auto mb-4">
+              {riders.filter(r => r.status === "Available").map(r => (
+                <label
+                  key={r.id}
+                  className="flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all"
+                  style={{
+                    background: selectedRider === r.id ? "#FEF2F2" : "#F9FAFB",
+                    border: `1.5px solid ${selectedRider === r.id ? "#EF4444" : "#E5E7EB"}`
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="rider"
+                    value={r.id}
+                    checked={selectedRider === r.id}
+                    onChange={() => setSelectedRider(r.id)}
+                    className="sr-only"
+                  />
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-white" style={{ background: NAVY, fontSize: "0.72rem", fontWeight: 700 }}>{r.avatar}</div>
+                  <div className="flex-1">
+                    <p style={{ color: "#1F2937", fontSize: "0.85rem", fontWeight: 500 }}>{r.name}</p>
+                    <p style={{ color: "#9CA3AF", fontSize: "0.75rem" }}>{r.plateNumber} &bull; {r.completedToday} trips today</p>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full" style={{ background: "#10B981" }} />
+                    <span style={{ color: "#065F46", fontSize: "0.72rem" }}>Available</span>
+                  </div>
+                </label>
+              ))}
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={() => setAssignModal(null)} className="flex-1 py-2.5 rounded-xl" style={{ border: "1.5px solid #E5E7EB", color: "#374151", fontSize: "0.85rem" }}>Cancel</button>
+              <button
+                onClick={handleAssign}
+                disabled={!selectedRider}
+                className="flex-1 py-2.5 rounded-xl text-white font-bold"
+                style={{ background: selectedRider ? "#DC2626" : "#fca5a5", fontSize: "0.85rem" }}
+              >
+                Confirm Reassignment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -799,6 +877,87 @@ function RidersBoardSection() {
   );
 }
 
+// ─── TRACKING MODAL/SECTION ──────────────────────────────────────────────────
+function TrackingSection() {
+  const activeRiders = riders.filter(r => r.status === "On Errand" || r.status === "Available");
+
+  return (
+    <div className="flex flex-col h-full bg-white rounded-2xl shadow-sm overflow-hidden" style={{ border: "1px solid #E5E7EB" }}>
+      {/* Header */}
+      <div className="p-4 flex items-center justify-between z-10" style={{ background: "rgba(255,255,255,0.95)", borderBottom: "1px solid #E5E7EB", backdropFilter: "blur(8px)" }}>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white" style={{ background: NAVY }}>
+            <MapPin size={20} />
+          </div>
+          <div>
+            <h3 style={{ color: "#1F2937", fontSize: "1rem", fontWeight: 700 }}>Live Fleet Tracking</h3>
+            <p style={{ color: "#6B7280", fontSize: "0.78rem" }}>Real-time GPS mapping of active personnel</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="px-3 py-1.5 rounded-xl flex items-center gap-2" style={{ background: "#D1FAE5", color: "#065F46", fontSize: "0.8rem", fontWeight: 600 }}>
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            {activeRiders.length} Active Signal{activeRiders.length !== 1 && "s"}
+          </span>
+        </div>
+      </div>
+
+      {/* Map View */}
+      <div className="flex-1 relative bg-gray-100 flex">
+        {/* The map image itself */}
+        <div className="flex-1 relative">
+          <img src="/dispatch_map_placeholder.png" alt="Global Tracking Map" className="w-full h-full object-cover" />
+          {/* Overlay gradient for aesthetics */}
+          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-gray-900/10 to-transparent pointer-events-none" />
+        </div>
+
+        {/* Right Sidebar: Rider Activity */}
+        <div className="w-72 bg-white flex flex-col z-10 shadow-xl" style={{ borderLeft: "1px solid #E5E7EB" }}>
+          <div className="p-4" style={{ borderBottom: "1px solid #E5E7EB", background: "#F9FAFB" }}>
+            <p style={{ color: "#1F2937", fontSize: "0.85rem", fontWeight: 700 }}>Active Personnel</p>
+            <p style={{ color: "#6B7280", fontSize: "0.72rem" }}>Locating GPS modules...</p>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-3 space-y-2">
+            {activeRiders.map(r => {
+              const e = errands.find(err => err.riderName === r.name && ["Assigned", "Traveling", "At Store", "Purchased", "En Route"].includes(err.status));
+              return (
+                <div key={r.id} className="p-3 rounded-xl transition-all hover:bg-gray-50 border border-transparent hover:border-gray-200 cursor-pointer">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="relative">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-white" style={{ background: NAVY, fontSize: "0.6rem", fontWeight: 700 }}>
+                        {r.avatar}
+                      </div>
+                      <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-white" style={{ background: r.status === "On Errand" ? "#3B82F6" : "#10B981" }} />
+                    </div>
+                    <div>
+                      <p style={{ color: "#1F2937", fontSize: "0.8rem", fontWeight: 600 }}>{r.name}</p>
+                      <p style={{ color: r.status === "On Errand" ? "#2563EB" : "#059669", fontSize: "0.7rem", fontWeight: 500 }}>{r.status}</p>
+                    </div>
+                  </div>
+                  {e && (
+                    <div className="pl-11">
+                      <p style={{ color: "#4B5563", fontSize: "0.72rem", lineHeight: 1.3 }}>
+                        <span style={{ fontWeight: 600, color: NAVY }}>{e.id}</span> &bull; {e.status}
+                      </p>
+                      <p style={{ color: "#6B7280", fontSize: "0.65rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        Dest: {e.address}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── CUSTOMERS SECTION ───────────────────────────────────────────────────────
 function CustomersSection() {
   const [search, setSearch] = useState("");
@@ -823,9 +982,6 @@ function CustomersSection() {
             style={{ background: "#FFFFFF", border: "1.5px solid #E5E7EB", fontSize: "0.85rem", color: "#1F2937" }}
           />
         </div>
-        <button onClick={() => setShowAddModal(true)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-white" style={{ background: NAVY, fontSize: "0.82rem" }}>
-          <Plus size={15} /> Add Customer
-        </button>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm" style={{ border: "1px solid #E5E7EB" }}>
@@ -891,12 +1047,29 @@ export default function DispatcherPortal() {
   const [notifOpen, setNotifOpen] = useState(false);
   const { notifications, unreadCount, markAllRead, markRead, dismiss } = useNotifications(dispatcherNotifications);
 
+  React.useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "decline_log" && e.newValue) {
+        try {
+          const log = JSON.parse(e.newValue);
+          toast.error(`Rider Declined Errand!`, {
+            description: `${log.riderName} declined ${log.errandId}. Reason: "${log.reason}"`,
+            duration: 5000,
+          });
+        } catch (err) { }
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
   const navItems: { id: Section; label: string; icon: any; badge?: number }[] = [
     { id: "queue", label: "Dispatch Queue", icon: ClipboardList, badge: 2 },
     { id: "active", label: "Active Errands", icon: Navigation, badge: 4 },
     { id: "riders", label: "Rider Board", icon: Bike },
     { id: "customers", label: "Customer Records", icon: Users },
     { id: "history", label: "Errand History", icon: Package },
+    { id: "tracking", label: "Live Tracking", icon: MapPin },
   ];
 
   const titles: Record<Section, string> = {
@@ -905,6 +1078,7 @@ export default function DispatcherPortal() {
     riders: "Rider Board",
     customers: "Customer Records",
     history: "Errand History",
+    tracking: "Live Fleet Tracking",
   };
 
   return (
@@ -1048,6 +1222,11 @@ export default function DispatcherPortal() {
                   </tbody>
                 </table>
               </div>
+            </div>
+          )}
+          {section === "tracking" && (
+            <div className="h-[750px]">
+              <TrackingSection />
             </div>
           )}
         </div>

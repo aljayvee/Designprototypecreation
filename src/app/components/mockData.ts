@@ -62,13 +62,22 @@ export type ErrandStatus =
 export type ErrandType = "Pabili" | "Padala" | "Bills Payment";
 export type PaymentMode = "Cash on Delivery" | "GCash" | "Bank Transfer";
 export type MerchantStatus = "Active" | "Inactive" | "Temporarily Closed";
-export type MerchantCategory = "Pabili" | "Padala" | "Bills Payment";
+export type MerchantCategory = 
+  | "All"
+  | "Retail Store"
+  | "Restaurant"
+  | "Pharmacy"
+  | "Department Store"
+  | "Convenience Store"
+  | "Cafés"
+  | "Bakery"
+  | "Remittance"
+  | "Banks"
+  | "Food Stalls"
+  | "Frozen Goods"
+  | "Other";
 
-export interface MerchantAuditEntry {
-  timestamp: string;
-  action: string;
-  by: string;
-}
+
 
 export interface Merchant {
   id: number;
@@ -85,7 +94,7 @@ export interface Merchant {
   status: MerchantStatus;
   createdAt: string;
   updatedAt: string;
-  auditLog: MerchantAuditEntry[];
+  auditLog: AuditLogEntry[];
 }
 
 export interface Rider {
@@ -99,7 +108,27 @@ export interface Rider {
   currentErrand?: string;
   avgTime?: string;
   rating?: number;
+  active?: boolean;
+  auditLog?: AuditLogEntry[];
 }
+
+export interface AuditLogEntry {
+  timestamp: string;
+  action: string;
+  by: string;
+  detail?: string;
+}
+
+export interface DeclineLog {
+  id: string;
+  errandId: string;
+  riderId: number;
+  riderName: string;
+  reason: string;
+  timestamp: string;
+}
+
+export const declineLogs: DeclineLog[] = [];
 
 export interface Errand {
   id: string;
@@ -122,6 +151,7 @@ export interface Errand {
   updatedAt: string;
   distance?: string;
   storeCount?: number;
+  auditLog?: AuditLogEntry[];
 }
 
 // ─── MESSAGING ────────────────────────────────────────────────────────────────
@@ -189,6 +219,8 @@ export interface Customer {
   totalErrands: number;
   lastErrand: string;
   status: "Regular" | "New" | "VIP";
+  active?: boolean;
+  auditLog?: AuditLogEntry[];
 }
 
 export const riders: Rider[] = [
@@ -258,19 +290,56 @@ export const serviceTypeData = [
 ];
 
 export const rateConfig = {
-  distanceBrackets: [
-    { range: "0 - 2 km", fee: 30 },
-    { range: "2.1 - 4 km", fee: 45 },
-    { range: "4.1 - 6 km", fee: 60 },
-    { range: "6.1 - 8 km", fee: 75 },
-    { range: "8.1 - 10 km", fee: 90 },
-    { range: "Lambayong / Isulan", fee: 120 },
-  ],
-  multiStoreSurcharge: 25,
-  groceryCommissionFlat: 50,
-  groceryCommissionPercent: 10,
-  groceryThreshold: 1000,
-  highValueThreshold: 3000,
+  baseFee: 70,
+  perKmFee: 5,
+  multiStoreSurcharge: 30,
+  commissionThreshold: 3000,
+  commissionFlat: 50,
+  commissionPercent: 0.1,
+  nonCodThreshold: 3000,
+  nonCodFeeBase: 15,
+  nonCodFeePremium: 50,
+  distanceBrackets: [],
+};
+
+/**
+ * Centrally calculates the service fee, commission, and surcharge based on business rules.
+ * @param type - Errand Type
+ * @param distance - Distance in km
+ * @param amount - Total purchase/bill amount
+ * @param storeCount - Number of stores visited (for Multi-store surcharge)
+ * @param isNonCod - If the payment mode is not Cash on Delivery
+ */
+export const calculateErrandFees = (
+  type: ErrandType,
+  distance: number,
+  amount: number,
+  storeCount: number = 1,
+  isNonCod: boolean = false
+) => {
+  let serviceFee = rateConfig.baseFee;
+  if (distance > 1) {
+    serviceFee += (distance - 1) * rateConfig.perKmFee;
+  }
+
+  let surcharge = 0;
+  if (storeCount > 1) {
+    // ₱30 per additional store, max 2 additional (total 3 stores)
+    surcharge = Math.min(storeCount - 1, 2) * rateConfig.multiStoreSurcharge;
+  }
+
+  if (isNonCod) {
+    surcharge += amount >= rateConfig.nonCodThreshold ? rateConfig.nonCodFeePremium : rateConfig.nonCodFeeBase;
+  }
+
+  let commission = 0;
+  if (type === "Pabili") {
+    commission = amount >= rateConfig.commissionThreshold 
+      ? amount * rateConfig.commissionPercent 
+      : rateConfig.commissionFlat;
+  }
+
+  return { serviceFee, commission, surcharge, total: serviceFee + commission + surcharge };
 };
 
 export const riderCurrentErrand: Errand = {
@@ -301,7 +370,7 @@ export const merchants: Merchant[] = [
   {
     id: 1,
     businessName: "Aling Rosa's Sari-Sari Store",
-    categories: ["Pabili"],
+    categories: ["Retail Store"],
     city: "Tacurong City",
     municipality: "Tacurong",
     barangay: "Brgy. Calean",
@@ -321,7 +390,7 @@ export const merchants: Merchant[] = [
   {
     id: 2,
     businessName: "BDO / Bayad Center Tacurong",
-    categories: ["Bills Payment"],
+    categories: ["Remittance", "Banks"],
     city: "Tacurong City",
     municipality: "Tacurong",
     barangay: "Brgy. Edsa",
@@ -340,7 +409,7 @@ export const merchants: Merchant[] = [
   {
     id: 3,
     businessName: "Rose Pharmacy Isulan Branch",
-    categories: ["Pabili"],
+    categories: ["Pharmacy"],
     city: "Isulan",
     municipality: "Isulan",
     barangay: "Brgy. Tina",
@@ -359,7 +428,7 @@ export const merchants: Merchant[] = [
   {
     id: 4,
     businessName: "GM Supermarket Tacurong",
-    categories: ["Pabili"],
+    categories: ["Department Store", "Retail Store"],
     city: "Tacurong City",
     municipality: "Tacurong",
     barangay: "Brgy. Poblacion",
@@ -379,7 +448,7 @@ export const merchants: Merchant[] = [
   {
     id: 5,
     businessName: "Palawan Pawnshop & Padala Center",
-    categories: ["Bills Payment"],
+    categories: ["Remittance"],
     city: "Tacurong City",
     municipality: "Tacurong",
     barangay: "Brgy. New Isabela",
@@ -398,7 +467,7 @@ export const merchants: Merchant[] = [
   {
     id: 6,
     businessName: "Mang Tino's Mini Grocery",
-    categories: ["Pabili"],
+    categories: ["Convenience Store"],
     city: "Tacurong City",
     municipality: "Tacurong",
     barangay: "Brgy. Buenaflor",
@@ -419,7 +488,7 @@ export const merchants: Merchant[] = [
   {
     id: 7,
     businessName: "DITO & Globe Payment Hub",
-    categories: ["Bills Payment", "Pabili"],
+    categories: ["Remittance", "Retail Store"],
     city: "Tacurong City",
     municipality: "Tacurong",
     barangay: "Brgy. Kakar",
@@ -438,7 +507,7 @@ export const merchants: Merchant[] = [
   {
     id: 8,
     businessName: "Lambayong Public Market Stall 12",
-    categories: ["Pabili"],
+    categories: ["Food Stalls"],
     city: "Lambayong",
     municipality: "Lambayong",
     barangay: "Brgy. Poblacion",
@@ -457,7 +526,7 @@ export const merchants: Merchant[] = [
   {
     id: 9,
     businessName: "Santiago Hardware Supply",
-    categories: ["Pabili"],
+    categories: ["Retail Store"],
     city: "Tacurong City",
     municipality: "Tacurong",
     barangay: "Brgy. Upper Katungal",
